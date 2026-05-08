@@ -3,40 +3,103 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-  <title>Panama Lifestyle OS · Concierge</title>
+  <title>Panama Private Concierge</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; background: #050609; font-family: 'Manrope', system-ui, sans-serif; height: 100%; overflow: hidden; }
-    .stage { display: flex; align-items: center; justify-content: center; min-height: 100dvh; background: radial-gradient(ellipse 60% 50% at 50% 0%, #1a1c30 0%, transparent 70%), radial-gradient(ellipse 40% 40% at 80% 80%, #0c1a12 0%, transparent 60%), #050609; }
-    .phone { position: relative; width: 393px; height: 852px; border-radius: 55px; background: #000; box-shadow: 0 0 0 1px #333, 0 0 0 11px #0d0d0d, 0 0 0 12px #2a2a2c, 0 50px 140px rgba(0,0,0,0.85), 0 20px 60px rgba(0,0,0,0.6); overflow: hidden; flex-shrink: 0; }
-    .phone-island { position: absolute; top: 13px; left: 50%; transform: translateX(-50%); width: 126px; height: 36px; background: #000; border-radius: 20px; z-index: 200; pointer-events: none; }
-    .phone-statusbar { position: absolute; top: 0; left: 0; right: 0; height: 54px; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 28px 10px; z-index: 150; pointer-events: none; font-family: -apple-system, system-ui, sans-serif; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.85); }
+
+    /* ── Stage: centres the phone on desktop ── */
+    .stage {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100dvh;
+      background:
+        radial-gradient(ellipse 60% 50% at 50%  0%, #1a1c30 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 80% 80%, #0c1a12 0%, transparent 60%),
+        #050609;
+    }
+
+    /* ── Phone chrome ── */
+    .phone {
+      position: relative;
+      width: 393px; height: 852px;
+      border-radius: 55px;
+      background: #000;
+      box-shadow:
+        0 0 0 1px #333,
+        0 0 0 11px #0d0d0d,
+        0 0 0 12px #2a2a2c,
+        0 50px 140px rgba(0,0,0,0.85),
+        0 20px 60px rgba(0,0,0,0.6);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .phone-island {
+      position: absolute; top: 13px; left: 50%; transform: translateX(-50%);
+      width: 126px; height: 36px;
+      background: #000; border-radius: 20px;
+      z-index: 200; pointer-events: none;
+    }
+    .phone-statusbar {
+      position: absolute; top: 0; left: 0; right: 0; height: 54px;
+      display: flex; align-items: flex-end; justify-content: space-between;
+      padding: 0 28px 10px;
+      z-index: 150; pointer-events: none;
+      font-family: -apple-system, system-ui, sans-serif;
+      font-size: 12px; font-weight: 600;
+      color: rgba(255,255,255,0.85);
+      transition: color 0.4s ease;
+    }
     .phone-statusbar.dark-status { color: rgba(0,0,0,0.7); }
-    .phone-home { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 134px; height: 5px; background: rgba(255,255,255,0.35); border-radius: 100px; z-index: 180; pointer-events: none; }
-    .phone-content { position: absolute; inset: 0; overflow: hidden; border-radius: 55px; }
-    @keyframes slideInRight { from { transform: translateX(100%); opacity: 0.7; } to { transform: translateX(0); opacity: 1; } }
-    @keyframes slideInLeft  { from { transform: translateX(-55%); opacity: 0.5; } to { transform: translateX(0); opacity: 1; } }
-    @keyframes fadeIn       { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+    .phone-home {
+      position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+      width: 134px; height: 5px;
+      background: rgba(255,255,255,0.35); border-radius: 100px;
+      z-index: 180; pointer-events: none;
+    }
+    .phone-content {
+      position: absolute; inset: 0;
+      overflow: hidden; border-radius: 55px;
+    }
+
+    /* ── Slide transitions ── */
+    @keyframes slideInRight {
+      from { transform: translateX(100%);  opacity: 0.7; }
+      to   { transform: translateX(0);     opacity: 1;   }
+    }
+    @keyframes slideInLeft {
+      from { transform: translateX(-55%);  opacity: 0.5; }
+      to   { transform: translateX(0);     opacity: 1;   }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.97); }
+      to   { opacity: 1; transform: scale(1);    }
+    }
     .slide-forward { animation: slideInRight 0.3s cubic-bezier(0.22,1,0.36,1) forwards; }
     .slide-back    { animation: slideInLeft  0.3s cubic-bezier(0.22,1,0.36,1) forwards; }
     .fade-in       { animation: fadeIn       0.35s cubic-bezier(0.22,1,0.36,1) forwards; }
+
+    /* ── Mobile: full viewport, no phone chrome ── */
     @media (max-width: 430px), (max-height: 870px) {
       .stage { padding: 0; }
       .phone { width: 100vw; height: 100dvh; border-radius: 0; box-shadow: none; }
       .phone-content { border-radius: 0; }
     }
   </style>
+
+  <!-- Core dependencies -->
   <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-  <script src="concierge/tones.js"></script>
-  <script src="concierge/webgl-exploring.js"></script>
-  <script src="concierge/app-state.js"></script>
-  <script type="text/babel" src="concierge/screens.jsx" data-presets="react"></script>
+
+  <!-- App modules — version strings bust CDN/browser cache -->
+  <script src="concierge/tones.js?v=2"></script>
+  <script src="concierge/webgl-exploring.js?v=3"></script>
+  <script src="concierge/app-state.js?v=2"></script>
+  <script type="text/babel" src="concierge/screens.jsx?v=2" data-presets="react"></script>
 </head>
 <body>
   <div class="stage">
@@ -52,32 +115,64 @@
       <div class="phone-home"></div>
     </div>
   </div>
+
   <script type="text/babel" data-presets="react">
+    // Tones with light ink (arriving, living) need a dark status bar
     const LIGHT_TONES = new Set(['arriving', 'living']);
+
     function syncStatusBar(stageId) {
       const bar = document.getElementById('status-bar');
       if (!bar) return;
       if (LIGHT_TONES.has(stageId)) bar.classList.add('dark-status');
       else bar.classList.remove('dark-status');
     }
+
     function AppRouter() {
-      const [st, setSt] = React.useState(() => window.AppState.getState());
-      React.useEffect(() => { return window.AppState.subscribe(s => setSt(Object.assign({}, s))); }, []);
+      const [st, setSt] = React.useState(() =>
+        (window.AppState && window.AppState.getState)
+          ? window.AppState.getState()
+          : { screen: 'welcome', stage: 'exploring', transition: 'none' }
+      );
+
+      // Subscribe to AppState changes
+      React.useEffect(() => {
+        if (!window.AppState) return;
+        return window.AppState.subscribe(s => setSt(Object.assign({}, s)));
+      }, []);
+
+      // Keep status-bar ink colour in sync with stage tone
       React.useEffect(() => { syncStatusBar(st.stage); }, [st.stage]);
-      const { ScreenWelcome, ScreenStagePicker, ScreenDesk, ScreenChat, ScreenPricing } = window.ConciergeScreens;
+
+      const { ScreenWelcome, ScreenStagePicker, ScreenDesk, ScreenChat, ScreenPricing } =
+        window.ConciergeScreens;
+
       const tone = Object.assign({}, window.CONCIERGE_TONES[st.stage], { id: st.stage });
-      const SCREENS = { welcome: ScreenWelcome, picker: ScreenStagePicker, desk: ScreenDesk, chat: ScreenChat, pricing: ScreenPricing };
+
+      const SCREENS = {
+        welcome: ScreenWelcome,
+        picker:  ScreenStagePicker,
+        desk:    ScreenDesk,
+        chat:    ScreenChat,
+        pricing: ScreenPricing,
+      };
       const ActiveScreen = SCREENS[st.screen] || ScreenWelcome;
-      const animClass = st.screen === 'welcome' ? 'fade-in' : st.transition === 'back' ? 'slide-back' : 'slide-forward';
-      const ctxValue = { state: st, navigate: window.AppState.navigate, goBack: window.AppState.goBack, selectStage: window.AppState.selectStage, confirmStage: window.AppState.confirmStage, setMode: window.AppState.setMode, addPoints: window.AppState.addPoints, openChat: window.AppState.openChat, seedChat: window.AppState.seedChat, sendMessage: window.AppState.sendMessage, selectTier: window.AppState.selectTier, isAgeRestricted: window.AppState.isAgeRestricted };
+
+      const animClass =
+        st.screen === 'welcome'       ? 'fade-in'       :
+        st.transition === 'back'      ? 'slide-back'    :
+                                        'slide-forward';
+
       return (
-        <window.AppCtx.Provider value={ctxValue}>
-          <div key={st.screen} className={animClass} style={{ position: 'absolute', inset: 0, willChange: 'transform, opacity' }}>
-            <ActiveScreen tone={tone} />
-          </div>
-        </window.AppCtx.Provider>
+        <div
+          key={st.screen}
+          className={animClass}
+          style={{ position: 'absolute', inset: 0, willChange: 'transform, opacity' }}
+        >
+          <ActiveScreen tone={tone} />
+        </div>
       );
     }
+
     ReactDOM.createRoot(document.getElementById('root')).render(<AppRouter />);
   </script>
 </body>
