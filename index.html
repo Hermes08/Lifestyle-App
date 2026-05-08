@@ -42,7 +42,7 @@
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
   <script src="concierge/tones.js?v=2"></script>
-  <script src="concierge/webgl-exploring.js?v=2"></script>
+  <script src="concierge/webgl-exploring.js?v=3"></script>
   <script src="concierge/app-state.js?v=2"></script>
   <script type="text/babel" src="concierge/ios-frame.jsx?v=2" data-presets="react"></script>
   <script type="text/babel" src="concierge/design-canvas.jsx?v=2"></script>
@@ -72,7 +72,6 @@
     ];
 
     function PhoneFrame({ children }) {
-      // Resolve IOSDevice lazily at render time — all external Babel scripts are loaded by then
       const IOSDevice = window.IOSDevice;
       if (IOSDevice) {
         return (
@@ -83,7 +82,6 @@
           </IOSDevice>
         );
       }
-      // Fallback: plain wrapper (shouldn't happen in practice)
       return (
         <div style={{ width: 402, height: 874, borderRadius: 48, overflow: 'hidden', position: 'relative', background: '#000' }}>
           {children}
