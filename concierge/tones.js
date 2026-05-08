@@ -1,13 +1,100 @@
-/**
- * CONCIERGE_TONES — Five narrative stages of the Panama journey
- */
-(function () {
-  'use strict';
-  window.CONCIERGE_TONES = {
-    exploring: { id: 'exploring', name: 'Exploring', mood: 'Dream', bg: '#0d0e1b', gradient: 'radial-gradient(ellipse at 30% 18%, #191a30 0%, #0d0e1b 65%)', bgGlass: 'rgba(255,255,255,0.04)', ink: '#eae6dc', inkMuted: '#62677e', accent: '#c8a36a', accentSoft: 'rgba(200,163,106,0.13)', card: 'rgba(255,255,255,0.05)', cardBorder: 'rgba(255,255,255,0.09)', orb: '#4a6fa5' },
-    arriving:  { id: 'arriving',  name: 'Arriving',  mood: 'Arrive', bg: '#f6f0e8', gradient: 'linear-gradient(145deg, #fdf7f0 0%, #efe3d2 100%)', bgGlass: 'rgba(0,0,0,0.04)', ink: '#241a10', inkMuted: '#8a7260', accent: '#c05a28', accentSoft: 'rgba(192,90,40,0.11)', card: 'rgba(0,0,0,0.045)', cardBorder: 'rgba(0,0,0,0.09)', orb: '#e8905a' },
-    settling:  { id: 'settling',  name: 'Settling',  mood: 'Settle', bg: '#1b2118', gradient: 'radial-gradient(ellipse at 62% 72%, #232c1a 0%, #1b2118 72%)', bgGlass: 'rgba(255,255,255,0.04)', ink: '#dae8d4', inkMuted: '#728a68', accent: '#86b870', accentSoft: 'rgba(134,184,112,0.14)', card: 'rgba(255,255,255,0.05)', cardBorder: 'rgba(255,255,255,0.09)', orb: '#5a9848' },
-    living:    { id: 'living',    name: 'Living',    mood: 'Live',   bg: '#eef5f8', gradient: 'linear-gradient(158deg, #e4f1f6 0%, #eef5f8 100%)', bgGlass: 'rgba(0,0,0,0.04)', ink: '#0e2c3a', inkMuted: '#527c8c', accent: '#0096a0', accentSoft: 'rgba(0,150,160,0.11)', card: 'rgba(0,0,0,0.04)', cardBorder: 'rgba(0,0,0,0.08)', orb: '#00c2cc' },
-    thriving:  { id: 'thriving',  name: 'Thriving',  mood: 'Thrive', bg: '#181308', gradient: 'radial-gradient(ellipse at 42% 28%, #22190a 0%, #181308 68%)', bgGlass: 'rgba(255,255,255,0.04)', ink: '#f0e8cc', inkMuted: '#8a7a50', accent: '#d4a840', accentSoft: 'rgba(212,168,64,0.14)', card: 'rgba(255,255,255,0.05)', cardBorder: 'rgba(255,255,255,0.09)', orb: '#b88a28' },
-  };
-}());
+// Tone-Shift palettes — each tone is a complete visual mode the app slips into
+// based on what the user is doing / where they are in the journey. Names match
+// the brief's 5 stages, with extra moods for specific service contexts.
+window.CONCIERGE_TONES = {
+  // ── Journey stages ─────────────────────────────────────────
+  exploring: {
+    name: 'Exploring',
+    sub: 'Curiosity, distance, possibility',
+    bg: '#0E0F14',
+    bg2: '#1A1D26',
+    surface: 'rgba(255,255,255,0.04)',
+    line: 'rgba(255,255,255,0.08)',
+    ink: '#EAE6DC',
+    mute: '#7E8597',
+    accent: '#C8A36A',     // soft gold — distant lamplight
+    accent2: '#5B7BA8',    // dusk blue
+    serif: "'Cormorant Garamond', 'Times New Roman', serif",
+    sans: "'Manrope', -apple-system, system-ui, sans-serif",
+    mono: "'JetBrains Mono', ui-monospace, monospace",
+    glyph: '◇',
+  },
+  arriving: {
+    name: 'Arriving',
+    sub: 'Arrival heat, terracotta, first light',
+    bg: '#1A0F0A',
+    bg2: '#2A1810',
+    surface: 'rgba(255,255,255,0.05)',
+    line: 'rgba(212,150,108,0.18)',
+    ink: '#F4EFE6',
+    mute: '#9C8474',
+    accent: '#D97757',     // coral / terracotta
+    accent2: '#E8B26B',    // sunset amber
+    serif: "'Cormorant Garamond', serif",
+    sans: "'Manrope', system-ui, sans-serif",
+    mono: "'JetBrains Mono', monospace",
+    glyph: '◐',
+  },
+  settling: {
+    name: 'Settling',
+    sub: 'Practical clarity, paperwork, lists',
+    bg: '#0F1411',
+    bg2: '#172019',
+    surface: 'rgba(255,255,255,0.04)',
+    line: 'rgba(160,180,160,0.12)',
+    ink: '#E8E8DD',
+    mute: '#7E8C7E',
+    accent: '#7FB069',     // sage / mid-green — calm utility
+    accent2: '#BFA06A',    // warm gold ledger
+    serif: "'Cormorant Garamond', serif",
+    sans: "'Manrope', system-ui, sans-serif",
+    mono: "'JetBrains Mono', monospace",
+    glyph: '◈',
+  },
+  living: {
+    name: 'Living',
+    sub: 'Daily rhythm, ocean light, leisure',
+    bg: '#08161B',
+    bg2: '#0F2530',
+    surface: 'rgba(255,255,255,0.05)',
+    line: 'rgba(120,200,210,0.15)',
+    ink: '#EAF4F4',
+    mute: '#7BA0A8',
+    accent: '#3FB6B0',     // turquoise
+    accent2: '#F0CC7A',    // warm sand
+    serif: "'Cormorant Garamond', serif",
+    sans: "'Manrope', system-ui, sans-serif",
+    mono: "'JetBrains Mono', monospace",
+    glyph: '◉',
+  },
+  thriving: {
+    name: 'Thriving',
+    sub: 'Insider quiet, deep forest, gold leaf',
+    bg: '#0A1410',
+    bg2: '#13211B',
+    surface: 'rgba(255,255,255,0.04)',
+    line: 'rgba(191,160,106,0.22)',
+    ink: '#F4EFE6',
+    mute: '#8B8474',
+    accent: '#BFA06A',     // gold leaf
+    accent2: '#5C8A6F',    // deep forest
+    serif: "'Cormorant Garamond', serif",
+    sans: "'Manrope', system-ui, sans-serif",
+    mono: "'JetBrains Mono', monospace",
+    glyph: '✦',
+  },
+};
+
+// Stage cards displayed on the "Where are you?" screen.
+window.CONCIERGE_STAGES = [
+  { id: 'exploring', label: 'Still exploring', sub: 'Researching from abroad', icon: '◇',
+    detail: 'Market reports, neighborhood guides, virtual tours.' },
+  { id: 'arriving', label: 'Moving soon', sub: 'Decision made, logistics ahead', icon: '◐',
+    detail: 'Movers, customs, airport pickup, first nights.' },
+  { id: 'settling', label: 'Just arrived', sub: 'Sorting out the basics', icon: '◈',
+    detail: 'Banking, schools, doctors, household help.' },
+  { id: 'living', label: 'Living here', sub: 'Routines in place', icon: '◉',
+    detail: 'Yacht days, private chefs, wellness, events.' },
+  { id: 'thriving', label: 'Long-time resident', sub: 'A Panama insider', icon: '✦',
+    detail: 'Off-market deals, business intros, mentor others.' },
+];

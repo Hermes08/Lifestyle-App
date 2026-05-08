@@ -122,6 +122,11 @@
     }
   }
 
+  function newChat() {
+    // Clear chat history and topic so ScreenChat seeds fresh content
+    _set({ chatHistory: [], chatTopic: null });
+  }
+
   function sendMessage(text) {
     if (!text || !text.trim()) return;
     var uid   = Date.now();
@@ -136,6 +141,8 @@
 
   /* ── Pricing ────────────────────────────────────────────── */
   function selectTier(tierId) {
+    // In pricing, user chooses a service plan.
+    // We record interest and open chat to continue.
     addPoints(15);
   }
 
@@ -160,7 +167,7 @@
       default: 'Tu llegada está próxima. Tengo coordinado el transporte, las llaves del apartamento y el kit de bienvenida. ¿Qué más quieres revisar antes de llegar?',
     },
     settling: {
-      escuela: 'Las dos más recomendadas: King\'s College (Cambridge curriculum, Marbella) y Oxford International (IB, Costa del Este). Ya tengo la visita al King\'s este viernes. ¿Cuántos años tienen tus hijos?',
+      escuela: "Las dos más recomendadas: King's College (Cambridge curriculum, Marbella) y Oxford International (IB, Costa del Este). Ya tengo la visita al King's este viernes. ¿Cuántos años tienen tus hijos?",
       medico:  'Paitilla y Pacífica Salud son los hospitales privados de referencia. Para médico de cabecera, el Dr. Morales en Paitilla habla inglés y tiene citas disponibles esta semana.',
       banco:   'Ya pasaron las 3 semanas — deberías tener factura local ahora. Banistmo Paitilla tiene cita disponible el jueves. ¿Te agendo?',
       docs:    'Para la residencia necesitas: pasaporte apostillado, antecedentes penales apostillados, certificado médico y fotos. El gestor tiene todo en proceso. El sello de apostilla tarda 5 días en EE.UU.',
@@ -234,6 +241,7 @@
     sendMessage:     sendMessage,
     selectTier:      selectTier,
     isAgeRestricted: isAgeRestricted,
+    newChat:         newChat,
   };
 
 }());
