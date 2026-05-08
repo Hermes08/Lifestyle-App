@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Concierge App — Tone-Shift Onboarding</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+
+  <style>
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: 'Manrope', system-ui, sans-serif;
+      background: #0a0b10;
+      color: #eae6dc;
+      min-height: 100vh;
+    }
+    .brief {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      padding: 14px 22px;
+      background: linear-gradient(180deg, #0a0b10ee, #0a0b10cc 70%, transparent);
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 24px; pointer-events: none;
+    }
+    .brief > * { pointer-events: auto; }
+    .brief-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 18px; font-weight: 400; letter-spacing: -0.01em;
+    }
+    .brief-title em { color: #c8a36a; font-style: italic; }
+    .brief-meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase;
+      color: #7e8597;
+    }
+  </style>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script src="concierge/tones.js"></script>
+  <script src="concierge/webgl-exploring.js"></script>
+  <script type="text/babel" src="concierge/design-canvas.jsx"></script>
+  <script type="text/babel" src="concierge/screens.jsx"></script>
+</head>
+<body>
+  <div class="brief">
+    <div>
+      <div class="brief-title">A concierge app that <em>shifts tone</em> with the journey.</div>
+      <div class="brief-meta">Tone-shift onboarding · 5 stages · 5 screens each</div>
+    </div>
+    <div class="brief-meta">Pan · Zoom · Click any frame to focus</div>
+  </div>
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { ScreenWelcome, ScreenStagePicker, ScreenDesk, ScreenChat, ScreenPricing } = window.ConciergeScreens;
+    const tones = window.CONCIERGE_TONES;
+    const stageOrder = ['exploring', 'arriving', 'settling', 'living', 'thriving'];
+
+    function Phone({ ScreenComp, tone, label }) {
+      return (
+        <div style={{
+          width: 294, height: 604, borderRadius: 38,
+          overflow: 'hidden', position: 'relative',
+          background: tone.bg,
+          boxShadow: '0 30px 60px rgba(0,0,0,0.45), 0 0 0 8px #0a0b10, 0 0 0 9px rgba(255,255,255,0.05)',
+          margin: '8px auto',
+        }}>
+          <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', width: 96, height: 28, borderRadius: 18, background: '#000', zIndex: 50 }}/>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 44, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 22px', zIndex: 40, fontFamily: '-apple-system, system-ui, sans-serif', fontSize: 12, fontWeight: 600, color: tone.ink }}>
+            <span>9:41</span>
+            <span style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+              <span style={{ display: 'inline-block', width: 22, height: 11, borderRadius: 3, border: `1px solid ${tone.ink}`, position: 'relative' }}>
+                <span style={{ position: 'absolute', inset: 1.5, background: tone.ink, borderRadius: 1 }}/>
+              </span>
+            </span>
+          </div>
+          <div style={{ width: '100%', height: '100%' }}><ScreenComp tone={tone} label={label}/></div>
+          <div style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', width: 110, height: 4, borderRadius: 100, background: tone.ink, opacity: 0.55, zIndex: 60 }}/>
+        </div>
+      );
+    }
+
+    const screenRows = [
+      { id: 'welcome', title: 'Welcome', sub: 'First impression · Three.js breathing orb', Comp: ScreenWelcome },
+      { id: 'picker',  title: 'Stage picker', sub: 'Where are you in the journey?', Comp: ScreenStagePicker },
+      { id: 'desk',    title: 'The Desk', sub: 'Home · Passport · Services · Voice orb · Mode tabs', Comp: ScreenDesk },
+      { id: 'chat',    title: 'Concierge thread', sub: 'María · Three.js meridian on Exploring', Comp: ScreenChat },
+      { id: 'pricing', title: 'Pricing', sub: 'Explorer free → Mastery $500/mo', Comp: ScreenPricing },
+    ];
+
+    function App() {
+      return (
+        <DesignCanvas>
+          {screenRows.map(row => (
+            <DCSection key={row.id} id={row.id} title={row.title} subtitle={row.sub}>
+              {stageOrder.map(stageId => {
+                const tone = tones[stageId];
+                return (
+                  <DCArtboard key={stageId} id={`${row.id}-${stageId}`} label={`${tone.name} · ${row.title}`} width={310} height={620}>
+                    <Phone ScreenComp={row.Comp} tone={{ ...tone, id: stageId }} label={`${tone.name} · ${row.title}`}/>
+                  </DCArtboard>
+                );
+              })}
+            </DCSection>
+          ))}
+        </DesignCanvas>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+
+    (function autoFit() {
+      const fit = () => {
+        const world = document.querySelector('.design-canvas > div');
+        const cards = document.querySelectorAll('.dc-card');
+        if (!world || cards.length === 0) return false;
+        const vw = window.innerWidth, vh = window.innerHeight;
+        const anyVisible = [...cards].some(c => { const r = c.getBoundingClientRect(); return r.right > 0 && r.left < vw && r.bottom > 0 && r.top < vh; });
+        if (anyVisible) return true;
+        const m = getComputedStyle(world).transform.match(/matrix\(([^)]+)\)/);
+        if (!m) return false;
+        const [a,,,, tx, ty] = m[1].split(',').map(parseFloat);
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        cards.forEach(c => { const r = c.getBoundingClientRect(); const wx = (r.left - tx) / a, wy = (r.top - ty) / a; minX = Math.min(minX, wx); maxX = Math.max(maxX, wx + r.width / a); minY = Math.min(minY, wy); maxY = Math.max(maxY, wy + r.height / a); });
+        const cw = maxX - minX, ch = maxY - minY;
+        if (cw <= 0 || ch <= 0) return false;
+        const pad = 80, scale = Math.min((vw - pad * 2) / cw, (vh - pad * 2) / ch, 1);
+        const ntx = (vw - cw * scale) / 2 - minX * scale, nty = (vh - ch * scale) / 2 - minY * scale;
+        world.style.transform = `translate3d(${ntx}px,${nty}px,0) scale(${scale})`;
+        world.style.setProperty('--dc-inv-zoom', String(1 / scale));
+        try { localStorage.setItem('dc-vp:' + location.pathname, JSON.stringify({ x: ntx, y: nty, scale })); } catch {}
+        return true;
+      };
+      let tries = 0;
+      const retry = () => { if (fit() || ++tries > 40) return; setTimeout(retry, 100); };
+      setTimeout(retry, 300);
+    })();
+  </script>
+</body>
+</html>
