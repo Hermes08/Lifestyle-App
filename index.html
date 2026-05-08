@@ -60,33 +60,52 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { ScreenWelcome, ScreenStagePicker, ScreenDesk, ScreenChat, ScreenPricing } = window.ConciergeScreens;
-    const IOSDevice = window.IOSDevice;
     const tones = window.CONCIERGE_TONES;
     const stageOrder = ['exploring', 'arriving', 'settling', 'living', 'thriving'];
 
-    const screenRows = [
-      { id: 'welcome', title: 'Welcome', sub: 'First impression · Three.js breathing orb', Comp: ScreenWelcome },
-      { id: 'picker',  title: 'Stage picker', sub: 'Where are you in the journey?', Comp: ScreenStagePicker },
-      { id: 'desk',    title: 'The Desk', sub: 'Home · Passport · Services · Voice orb · Mode tabs', Comp: ScreenDesk },
-      { id: 'chat',    title: 'Concierge thread', sub: 'María · Three.js meridian on Exploring', Comp: ScreenChat },
-      { id: 'pricing', title: 'Pricing', sub: 'Explorer free → Mastery $500/mo', Comp: ScreenPricing },
+    const screenRowDefs = [
+      { id: 'welcome', title: 'Welcome', sub: 'First impression · Three.js breathing orb', key: 'ScreenWelcome' },
+      { id: 'picker',  title: 'Stage picker', sub: 'Where are you in the journey?', key: 'ScreenStagePicker' },
+      { id: 'desk',    title: 'The Desk', sub: 'Home · Passport · Services · Voice orb · Mode tabs', key: 'ScreenDesk' },
+      { id: 'chat',    title: 'Concierge thread', sub: 'María · Three.js meridian on Exploring', key: 'ScreenChat' },
+      { id: 'pricing', title: 'Pricing', sub: 'Explorer free → Mastery $500/mo', key: 'ScreenPricing' },
     ];
 
+    function PhoneFrame({ children }) {
+      // Resolve IOSDevice lazily at render time — all external Babel scripts are loaded by then
+      const IOSDevice = window.IOSDevice;
+      if (IOSDevice) {
+        return (
+          <IOSDevice dark width={402} height={874}>
+            <div style={{ position: 'relative', height: '100%', overflow: 'hidden' }}>
+              {children}
+            </div>
+          </IOSDevice>
+        );
+      }
+      // Fallback: plain wrapper (shouldn't happen in practice)
+      return (
+        <div style={{ width: 402, height: 874, borderRadius: 48, overflow: 'hidden', position: 'relative', background: '#000' }}>
+          {children}
+        </div>
+      );
+    }
+
     function App() {
+      const screens = window.ConciergeScreens || {};
+      const rows = screenRowDefs.map(def => ({ ...def, Comp: screens[def.key] })).filter(r => r.Comp);
       return (
         <DesignCanvas>
-          {screenRows.map(row => (
+          {rows.map(row => (
             <DCSection key={row.id} id={row.id} title={row.title} subtitle={row.sub}>
               {stageOrder.map(stageId => {
                 const tone = tones[stageId];
+                const ScreenComp = row.Comp;
                 return (
                   <DCArtboard key={stageId} id={`${row.id}-${stageId}`} label={`${tone.name} · ${row.title}`} width={402} height={874}>
-                    <IOSDevice dark width={402} height={874}>
-                      <div style={{ position: 'relative', height: '100%', overflow: 'hidden' }}>
-                        <row.Comp tone={{ ...tone, id: stageId }} label={`${tone.name} · ${row.title}`}/>
-                      </div>
-                    </IOSDevice>
+                    <PhoneFrame>
+                      <ScreenComp tone={{ ...tone, id: stageId }} label={`${tone.name} · ${row.title}`}/>
+                    </PhoneFrame>
                   </DCArtboard>
                 );
               })}
