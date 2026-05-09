@@ -33,17 +33,17 @@ function StatusEcho({ tone, showBack = false }) {
       position: 'absolute', top: 56, left: 0, right: 0,
       display: 'flex', justifyContent: 'space-between',
       padding: '0 28px',
-      fontFamily: tone.mono, fontSize: 9, letterSpacing: '0.18em',
+      fontFamily: tone.mono, fontSize: 13, letterSpacing: '0.18em',
       color: tone.mute, textTransform: 'uppercase',
       zIndex: 10,
     }}>
       <span
         onClick={showBack ? () => window.AppState?.goBack() : undefined}
         style={{ cursor: showBack ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: 6 }}>
-        {showBack && <span style={{ fontSize: 12, lineHeight: 1, marginTop: -1 }}>‹</span>}
+        {showBack && <span style={{ fontSize: 14, lineHeight: 1, marginTop: -1 }}>‹</span>}
         Concierge · {tone.name}
       </span>
-      <span>{tone.glyph}</span>
+      <span style={{ fontSize: 14 }}>{tone.glyph}</span>
     </div>
   );
 }
@@ -54,6 +54,7 @@ function ScreenWelcome({ tone, label }) {
   const vortexRef = useRef(null);
   const isExploring = tone.id === 'exploring';
 
+  // Three.js intro plays only on Exploring tone — the first impression.
   useEffect(() => {
     if (!isExploring || !canvasRef.current) return;
     if (!window.ExploringOrbScene) return;
@@ -63,11 +64,15 @@ function ScreenWelcome({ tone, label }) {
     return () => s.destroy();
   }, [isExploring, tone.accent, tone.accent2, tone.bg]);
 
+  // For non-exploring tones, render an ambient PhantomShield-style particle
+  // funnel as a low-opacity backdrop — flowing upward, color-tinted to the
+  // current tone. Sits behind the UI; never obstructs interaction.
   useEffect(() => {
     if (isExploring || !vortexRef.current) return;
-    if (!window.ExploringQuestionsScene) return;
-    const s = window.ExploringQuestionsScene(vortexRef.current, {
+    if (!window.PhantomStreamScene) return;
+    const s = window.PhantomStreamScene(vortexRef.current, {
       accent: tone.accent, accent2: tone.accent2,
+      density: 0.85, flow: 'funnel',
     });
     return () => s.destroy();
   }, [isExploring, tone.accent, tone.accent2]);
@@ -79,12 +84,15 @@ function ScreenWelcome({ tone, label }) {
     }}>
       <ToneBackground tone={tone}/>
 
+      {/* Subtle vortex/meridian for non-exploring tones — same visual
+         language as the chat thread, but small and ambient. Bottom-right,
+         small footprint, low opacity — feels like a quiet system pulse. */}
       {!isExploring && (
         <canvas ref={vortexRef} style={{
           position: 'absolute',
-          bottom: 100, right: -30,
-          width: 200, height: 200,
-          opacity: 0.32, pointerEvents: 'none', zIndex: 1,
+          inset: 0,
+          width: '100%', height: '100%',
+          opacity: 0.5, pointerEvents: 'none', zIndex: 1,
           mixBlendMode: 'screen',
         }}/>
       )}
@@ -97,6 +105,8 @@ function ScreenWelcome({ tone, label }) {
             opacity: 0.78, pointerEvents: 'none', zIndex: 1,
           }}/>
 
+          {/* MazeHQ-style ambient hotspots — dotted concentric rings,
+              scattered, low opacity. Tighter / fewer than before. */}
           <svg style={{
             position: 'absolute', inset: 0, width: '100%', height: '100%',
             zIndex: 1, pointerEvents: 'none', mixBlendMode: 'screen',
@@ -127,12 +137,14 @@ function ScreenWelcome({ tone, label }) {
               strokeWidth="0.5" strokeDasharray="1.26 1.89"/>
           </svg>
 
+          {/* MazeHQ event chips — Panama metadata floating like CVE events on PhantomShield.
+              Each chip taggs a place with the qualities we'd surface for it. */}
           {[
-            { top: 295, left: 18,  delay: '0s',   text: 'BOQUETE · 1,200m',
+            { top: 350, left: 18,  delay: '0s',   text: 'BOQUETE · 1,200m',
               tags: [['Climate', 'gold'], ['Cloud forest', 'gold']] },
-            { top: 470, right: 16, delay: '1.4s', text: 'CASCO ANTIGUO · 1673',
+            { top: 510, right: 16, delay: '1.4s', text: 'CASCO ANTIGUO · 1673',
               tags: [['Patrimonio', 'blue'], ['Walkable', 'gold']] },
-            { top: 720, left: 22,  delay: '0.6s', text: 'PEARL ISLANDS · 30nm',
+            { top: 705, left: 22,  delay: '0.6s', text: 'PEARL ISLANDS · 30nm',
               tags: [['Charter', 'blue'], ['Private cay', 'gold']] },
           ].map((c, i) => (
             <div key={i} style={{
@@ -142,7 +154,7 @@ function ScreenWelcome({ tone, label }) {
               animation: `psFloat 6s ease-in-out ${c.delay} infinite, psFadeIn 1s ease-out ${c.delay} both`,
             }}>
               <div style={{
-                fontFamily: tone.mono, fontSize: 9, letterSpacing: '0.18em',
+                fontFamily: tone.mono, fontSize: 11, letterSpacing: '0.18em',
                 color: tone.ink, opacity: 0.78,
                 background: 'rgba(20,28,46,0.55)',
                 backdropFilter: 'blur(12px)',
@@ -155,7 +167,7 @@ function ScreenWelcome({ tone, label }) {
               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', maxWidth: 180 }}>
                 {c.tags.map((t, j) => (
                   <span key={j} style={{
-                    fontFamily: tone.mono, fontSize: 8, letterSpacing: '0.14em',
+                    fontFamily: tone.mono, fontSize: 10, letterSpacing: '0.14em',
                     textTransform: 'uppercase',
                     color: t[1] === 'gold' ? tone.accent : tone.accent2,
                     border: `0.5px solid ${(t[1] === 'gold' ? tone.accent : tone.accent2)}80`,
@@ -191,15 +203,16 @@ function ScreenWelcome({ tone, label }) {
         display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
         zIndex: 2,
       }}>
+        {/* Wordmark */}
         <div>
           <div style={{
-            fontFamily: tone.mono, fontSize: 10, letterSpacing: '0.32em',
-            color: tone.mute, textTransform: 'uppercase', marginBottom: 18,
+            fontFamily: tone.mono, fontSize: 13, letterSpacing: '0.32em',
+            color: tone.mute, textTransform: 'uppercase', marginBottom: 22,
           }}>
             Panama · Private Concierge
           </div>
           <div style={{
-            fontFamily: tone.serif, fontWeight: 300, fontSize: 44,
+            fontFamily: tone.serif, fontWeight: 300, fontSize: 54,
             lineHeight: 1.05, letterSpacing: '-0.02em',
             color: tone.ink,
           }}>
@@ -221,17 +234,19 @@ function ScreenWelcome({ tone, label }) {
           </div>
         </div>
 
+        {/* Decorative element */}
         <div style={{
-          alignSelf: 'center', fontSize: 64, color: tone.accent, opacity: 0.55,
+          alignSelf: 'center', fontSize: 78, color: tone.accent, opacity: 0.55,
           letterSpacing: '0.2em',
         }}>
           {tone.glyph}
         </div>
 
+        {/* CTA */}
         <div>
           <div style={{
-            fontFamily: tone.serif, fontStyle: 'italic', fontSize: 14,
-            color: tone.mute, marginBottom: 18, lineHeight: 1.5,
+            fontFamily: tone.serif, fontStyle: 'italic', fontSize: 21,
+            color: tone.mute, marginBottom: 22, lineHeight: 1.5,
           }}>
             {tone.id === 'exploring' && '— a written introduction, no commitment.'}
             {tone.id === 'arriving' && '— we have your dates. Let\'s prepare.'}
@@ -242,10 +257,10 @@ function ScreenWelcome({ tone, label }) {
           <button
             onClick={() => window.AppState?.navigate('picker')}
             style={{
-              width: '100%', padding: '16px', borderRadius: 0,
+              width: '100%', padding: '28px', borderRadius: 0,
               background: tone.accent, color: tone.bg, border: 'none',
-              fontFamily: tone.sans, fontSize: 12, fontWeight: 600,
-              letterSpacing: '0.22em', textTransform: 'uppercase',
+              fontFamily: tone.sans, fontSize: 17, fontWeight: 700,
+              letterSpacing: '0.26em', textTransform: 'uppercase',
               cursor: 'pointer',
             }}>
             {tone.id === 'exploring' && 'Begin'}
@@ -260,7 +275,7 @@ function ScreenWelcome({ tone, label }) {
   );
 }
 
-/* ── Screen 2: Stage picker ── */
+/* ── Screen 2: "Where are you in the journey?" picker ── */
 function ScreenStagePicker({ tone, label }) {
   const stages = window.CONCIERGE_STAGES;
   return (
@@ -275,13 +290,13 @@ function ScreenStagePicker({ tone, label }) {
         display: 'flex', flexDirection: 'column', gap: 22 }}>
         <div>
           <div style={{
-            fontFamily: tone.mono, fontSize: 10, letterSpacing: '0.28em',
-            color: tone.mute, textTransform: 'uppercase', marginBottom: 14,
+            fontFamily: tone.mono, fontSize: 13, letterSpacing: '0.28em',
+            color: tone.mute, textTransform: 'uppercase', marginBottom: 16,
           }}>
             Step 01 · The Question
           </div>
           <div style={{
-            fontFamily: tone.serif, fontWeight: 300, fontSize: 30,
+            fontFamily: tone.serif, fontWeight: 300, fontSize: 42,
             lineHeight: 1.15, letterSpacing: '-0.015em',
           }}>
             Where are you<br/>
@@ -296,33 +311,34 @@ function ScreenStagePicker({ tone, label }) {
               <div key={s.id}
                 onClick={() => { window.AppState?.selectStage(s.id); window.AppState?.confirmStage(); }}
                 style={{
-                  padding: '14px 16px',
+                  padding: '22px 22px',
                   background: active ? `${tone.accent}14` : tone.surface,
                   border: `1px solid ${active ? tone.accent : tone.line}`,
-                  display: 'flex', alignItems: 'flex-start', gap: 14,
-                  position: 'relative', cursor: 'pointer',
+                  display: 'flex', alignItems: 'flex-start', gap: 16,
+                  position: 'relative',
+                  cursor: 'pointer',
                   transition: 'background 0.15s',
                 }}>
                 <div style={{
-                  fontSize: 16, color: active ? tone.accent : tone.mute,
-                  marginTop: 1, width: 18,
+                  fontSize: 20, color: active ? tone.accent : tone.mute,
+                  marginTop: 1, width: 22,
                 }}>{s.icon}</div>
                 <div style={{ flex: 1 }}>
                   <div style={{
                     fontFamily: tone.serif, fontStyle: 'italic',
-                    fontSize: 17, fontWeight: 400,
-                    color: tone.ink, lineHeight: 1.2,
+                    fontSize: 24, fontWeight: 400,
+                    color: active ? tone.ink : tone.ink, lineHeight: 1.2,
                   }}>{s.label}</div>
                   <div style={{
-                    fontFamily: tone.sans, fontSize: 11, color: tone.mute,
-                    marginTop: 3, letterSpacing: '0.04em',
+                    fontFamily: tone.sans, fontSize: 15, color: tone.mute,
+                    marginTop: 4, letterSpacing: '0.04em',
                   }}>{s.sub}</div>
                 </div>
                 {active && (
                   <div style={{
-                    position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                    fontFamily: tone.mono, fontSize: 9, color: tone.accent,
-                    letterSpacing: '0.2em',
+                    position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
+                    fontFamily: tone.mono, fontSize: 13, color: tone.accent,
+                    letterSpacing: '0.22em', fontWeight: 600,
                   }}>YOU</div>
                 )}
               </div>
@@ -332,7 +348,7 @@ function ScreenStagePicker({ tone, label }) {
 
         <div style={{
           marginTop: 'auto', fontFamily: tone.serif, fontStyle: 'italic',
-          fontSize: 13, color: tone.mute, lineHeight: 1.5,
+          fontSize: 18, color: tone.mute, lineHeight: 1.5,
         }}>
           The app shifts to match where you stand. Move when you're ready.
         </div>
@@ -387,15 +403,16 @@ function ScreenDesk({ tone, label }) {
 
       <div style={{ position: 'absolute', inset: 0, padding: '110px 24px 30px',
         display: 'flex', flexDirection: 'column', gap: 18 }}>
+        {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
           <div>
             <div style={{
-              fontFamily: tone.mono, fontSize: 9, letterSpacing: '0.3em',
+              fontFamily: tone.mono, fontSize: 13, letterSpacing: '0.3em',
               color: tone.mute, textTransform: 'uppercase',
             }}>The Desk</div>
             <div style={{
-              fontFamily: tone.serif, fontWeight: 300, fontSize: 28,
-              lineHeight: 1.05, letterSpacing: '-0.015em', marginTop: 4,
+              fontFamily: tone.serif, fontWeight: 300, fontSize: 40,
+              lineHeight: 1.05, letterSpacing: '-0.015em', marginTop: 6,
             }}>
               {tone.id === 'exploring' && <>Reading <em style={{ color: tone.accent, fontStyle: 'italic' }}>the country</em></>}
               {tone.id === 'arriving' && <>Final <em style={{ color: tone.accent, fontStyle: 'italic' }}>preparations</em></>}
@@ -407,11 +424,12 @@ function ScreenDesk({ tone, label }) {
           <div
             onClick={() => window.AppState?.navigate('pricing')}
             style={{
-              width: 36, height: 36, borderRadius: '50%',
+              width: 44, height: 44, borderRadius: '50%',
               border: `1px solid ${tone.line}`, background: tone.surface,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: tone.serif, fontStyle: 'italic', fontSize: 14,
-              color: tone.accent, cursor: 'pointer',
+              fontFamily: tone.serif, fontStyle: 'italic', fontSize: 21,
+              color: tone.accent,
+              cursor: 'pointer',
             }}>
             {tone.id === 'exploring' ? 'E' :
              tone.id === 'arriving' ? 'S' :
@@ -420,29 +438,30 @@ function ScreenDesk({ tone, label }) {
           </div>
         </div>
 
-        {/* Service list */}
+        {/* List */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 1,
           background: tone.line, padding: 1 }}>
           {items.map((s, i) => (
             <div key={i} style={{
-              padding: '14px 14px', background: tone.bg2,
+              padding: '22px 18px',
+              background: tone.bg2,
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               gap: 10,
             }}>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'baseline', flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', gap: 14, alignItems: 'baseline', flex: 1, minWidth: 0 }}>
                 <div style={{
-                  fontFamily: tone.mono, fontSize: 9, color: tone.accent,
-                  letterSpacing: '0.15em',
+                  fontFamily: tone.mono, fontSize: 13, color: tone.accent,
+                  letterSpacing: '0.15em', fontWeight: 500,
                 }}>0{i+1}</div>
                 <div style={{
-                  fontFamily: tone.serif, fontSize: 15, color: tone.ink,
+                  fontFamily: tone.serif, fontSize: 21, color: tone.ink,
                   letterSpacing: '-0.005em', overflow: 'hidden', textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap', lineHeight: 1.3,
                 }}>{s.l}</div>
               </div>
               {s.t && (
                 <div style={{
-                  fontFamily: tone.mono, fontSize: 9, color: tone.mute,
+                  fontFamily: tone.mono, fontSize: 12, color: tone.mute,
                   letterSpacing: '0.12em', textTransform: 'uppercase', flexShrink: 0,
                 }}>{s.t}</div>
               )}
@@ -450,7 +469,7 @@ function ScreenDesk({ tone, label }) {
           ))}
         </div>
 
-        {/* Footer → Chat */}
+        {/* Footer note */}
         <div
           onClick={() => window.AppState?.navigate('chat')}
           style={{
@@ -460,7 +479,8 @@ function ScreenDesk({ tone, label }) {
             cursor: 'pointer',
           }}>
           <div style={{
-            fontFamily: tone.serif, fontStyle: 'italic', fontSize: 13, color: tone.mute,
+            fontFamily: tone.serif, fontStyle: 'italic', fontSize: 18,
+            color: tone.mute,
           }}>
             {tone.id === 'exploring' && 'Eduardo is reading replies.'}
             {tone.id === 'arriving' && 'Sofia is on the line with customs.'}
@@ -469,7 +489,8 @@ function ScreenDesk({ tone, label }) {
             {tone.id === 'thriving' && 'A note from the Director.'}
           </div>
           <div style={{
-            fontFamily: tone.mono, fontSize: 9, color: tone.accent, letterSpacing: '0.18em',
+            fontFamily: tone.mono, fontSize: 18, color: tone.accent,
+            letterSpacing: '0.18em',
           }}>›</div>
         </div>
       </div>
@@ -477,13 +498,53 @@ function ScreenDesk({ tone, label }) {
   );
 }
 
-/* ── Screen 4: Concierge chat ── */
+/* ── Screen 4: Concierge chat / message ── */
 function ScreenChat({ tone, label }) {
   const canvasRef = useRef(null);
   const isExploring = tone.id === 'exploring';
   const [inputText, setInputText] = useState('');
   const [liveHistory, setLiveHistory] = useState(null);
   const scrollRef = useRef(null);
+
+  // Seed chatHistory with static thread on first mount (if empty),
+  // then subscribe so new messages append to it.
+  useEffect(() => {
+    if (!window.AppState) return;
+    // Convert static seed thread to chatHistory format and seed if empty
+    const seedMessages = thread.map((m, i) => ({
+      id: Date.now() + i,
+      role: m.from === 'me' ? 'user' : 'maria',
+      text: m.t,
+      ts: new Date(),
+    }));
+    window.AppState.seedChat(seedMessages);
+    // Now subscribe to live history
+    const unsub = window.AppState.subscribe(s => {
+      if (s.chatHistory && s.chatHistory.length > 0) {
+        setLiveHistory(s.chatHistory);
+      }
+    });
+    return () => unsub && unsub();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tone.id]); // re-seed when stage changes
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [liveHistory]);
+
+  // Three.js: when an Exploring client first opens the chat, particles vortex
+  // inward to a pulsing meridian — the concierge "tuning in" to their questions.
+  useEffect(() => {
+    if (!isExploring || !canvasRef.current) return;
+    if (!window.ExploringQuestionsScene) return;
+    const s = window.ExploringQuestionsScene(canvasRef.current, {
+      accent: tone.accent, accent2: tone.accent2,
+    });
+    return () => s.destroy();
+  }, [isExploring, tone.accent, tone.accent2]);
 
   const msgs = {
     exploring: [
@@ -518,37 +579,6 @@ function ScreenChat({ tone, label }) {
   };
   const thread = msgs[tone.id];
 
-  // Seed chatHistory with static thread on mount, then subscribe to live updates
-  useEffect(() => {
-    if (!window.AppState) return;
-    const seedMessages = thread.map((m, i) => ({
-      id: Date.now() + i,
-      role: m.from === 'me' ? 'user' : 'maria',
-      text: m.t,
-      ts: new Date(),
-    }));
-    window.AppState.seedChat(seedMessages);
-    const unsub = window.AppState.subscribe(s => {
-      if (s.chatHistory && s.chatHistory.length > 0) {
-        setLiveHistory(s.chatHistory);
-      }
-    });
-    return () => unsub && unsub();
-  }, [tone.id]);
-
-  useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [liveHistory]);
-
-  useEffect(() => {
-    if (!isExploring || !canvasRef.current) return;
-    if (!window.ExploringQuestionsScene) return;
-    const s = window.ExploringQuestionsScene(canvasRef.current, {
-      accent: tone.accent, accent2: tone.accent2,
-    });
-    return () => s.destroy();
-  }, [isExploring, tone.accent, tone.accent2]);
-
   return (
     <div style={{
       position: 'relative', width: '100%', height: '100%',
@@ -571,10 +601,10 @@ function ScreenChat({ tone, label }) {
           paddingBottom: 12, borderBottom: `1px solid ${tone.line}`,
         }}>
           <div style={{
-            width: 40, height: 40, borderRadius: '50%',
+            width: 48, height: 48, borderRadius: '50%',
             background: `linear-gradient(135deg, ${tone.accent}, ${tone.accent2})`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: tone.serif, fontStyle: 'italic', fontSize: 16,
+            fontFamily: tone.serif, fontStyle: 'italic', fontSize: 21,
             color: tone.bg, fontWeight: 500,
           }}>
             {tone.id === 'exploring' && 'E'}
@@ -584,7 +614,10 @@ function ScreenChat({ tone, label }) {
             {tone.id === 'thriving' && 'D'}
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: tone.serif, fontSize: 15, color: tone.ink, letterSpacing: '-0.005em' }}>
+            <div style={{
+              fontFamily: tone.serif, fontSize: 21, color: tone.ink,
+              letterSpacing: '-0.005em',
+            }}>
               {tone.id === 'exploring' && 'Eduardo Mendoza'}
               {tone.id === 'arriving' && 'Sofia Arosemena'}
               {tone.id === 'settling' && 'Luis Castillo'}
@@ -592,8 +625,8 @@ function ScreenChat({ tone, label }) {
               {tone.id === 'thriving' && 'D. (Director)'}
             </div>
             <div style={{
-              fontFamily: tone.mono, fontSize: 9, color: tone.mute,
-              letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 2,
+              fontFamily: tone.mono, fontSize: 13, color: tone.mute,
+              letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 3,
             }}>
               {tone.id === 'exploring' && 'Country Curator · 14 yrs'}
               {tone.id === 'arriving' && 'Move Manager · Replied 2m'}
@@ -602,37 +635,63 @@ function ScreenChat({ tone, label }) {
               {tone.id === 'thriving' && 'Members\' Office'}
             </div>
           </div>
-          <div style={{ fontSize: 18, color: tone.accent, opacity: 0.7 }}>{tone.glyph}</div>
+          <div style={{
+            fontSize: 22, color: tone.accent, opacity: 0.7,
+          }}>{tone.glyph}</div>
         </div>
 
-        {/* Messages */}
+        {/* Messages — live from AppState or static seed */}
         <div ref={scrollRef} style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, overflowY: 'auto' }}>
-          {(liveHistory || thread.map(m => ({ role: m.from === 'me' ? 'user' : 'maria', text: m.t }))).map((m, i) => {
-            const me = m.role === 'user';
-            return (
-              <div key={m.id || i} style={{ display: 'flex', justifyContent: me ? 'flex-end' : 'flex-start' }}>
-                <div style={{
-                  maxWidth: '82%', padding: '10px 14px',
-                  background: me ? `${tone.accent}26` : tone.surface,
-                  border: me ? `1px solid ${tone.accent}40` : `1px solid ${tone.line}`,
-                  fontFamily: me ? tone.sans : tone.serif,
-                  fontSize: me ? 13 : 14,
-                  color: tone.ink, lineHeight: 1.45,
-                  letterSpacing: me ? '0' : '-0.005em',
-                }}>
-                  {m.text}
-                </div>
-              </div>
-            );
-          })}
+          {(liveHistory
+            ? liveHistory.map((m, i) => {
+                const me = m.role === 'user';
+                return (
+                  <div key={m.id || i} style={{
+                    display: 'flex', justifyContent: me ? 'flex-end' : 'flex-start',
+                  }}>
+                    <div style={{
+                      maxWidth: '82%', padding: '15px 19px',
+                      background: me ? `${tone.accent}26` : tone.surface,
+                      border: me ? `1px solid ${tone.accent}40` : `1px solid ${tone.line}`,
+                      fontFamily: me ? tone.sans : tone.serif,
+                      fontSize: me ? 16 : 18,
+                      color: tone.ink, lineHeight: 1.45,
+                      letterSpacing: me ? '0' : '-0.005em',
+                    }}>
+                      {m.text}
+                    </div>
+                  </div>
+                );
+              })
+            : thread.map((m, i) => {
+                const me = m.from === 'me';
+                return (
+                  <div key={i} style={{
+                    display: 'flex', justifyContent: me ? 'flex-end' : 'flex-start',
+                  }}>
+                    <div style={{
+                      maxWidth: '82%', padding: '15px 19px',
+                      background: me ? `${tone.accent}26` : tone.surface,
+                      border: me ? `1px solid ${tone.accent}40` : `1px solid ${tone.line}`,
+                      fontFamily: me ? tone.sans : tone.serif,
+                      fontSize: me ? 16 : 18,
+                      color: tone.ink, lineHeight: 1.45,
+                      letterSpacing: me ? '0' : '-0.005em',
+                    }}>
+                      {m.t}
+                    </div>
+                  </div>
+                );
+              })
+          )}
         </div>
 
         {/* Composer */}
         <div style={{
           position: 'absolute', left: 20, right: 20, bottom: 30,
-          padding: '10px 14px', background: tone.surface,
+          padding: '16px 22px', background: tone.surface,
           border: `1px solid ${tone.line}`,
-          display: 'flex', gap: 10, alignItems: 'center',
+          display: 'flex', gap: 12, alignItems: 'center',
         }}>
           <input
             value={inputText}
@@ -646,7 +705,8 @@ function ScreenChat({ tone, label }) {
             placeholder="Write a note…"
             style={{
               flex: 1, border: 'none', background: 'transparent', outline: 'none',
-              fontFamily: tone.serif, fontStyle: 'italic', fontSize: 13, color: tone.ink,
+              fontFamily: tone.serif, fontStyle: 'italic',
+              fontSize: 18, color: tone.ink,
             }}
           />
           <div
@@ -657,8 +717,8 @@ function ScreenChat({ tone, label }) {
               }
             }}
             style={{
-              fontFamily: tone.mono, fontSize: 9, color: tone.accent,
-              letterSpacing: '0.2em', cursor: 'pointer',
+              fontFamily: tone.mono, fontSize: 14, color: tone.accent,
+              letterSpacing: '0.22em', cursor: 'pointer', fontWeight: 600,
             }}>SEND</div>
         </div>
       </div>
@@ -668,8 +728,9 @@ function ScreenChat({ tone, label }) {
 
 window.ConciergeScreens = { ScreenWelcome, ScreenStagePicker, ScreenDesk, ScreenChat, ScreenPricing };
 
-/* ── Screen 5: Pricing ── */
+/* ── Screen 5: Pricing — tiered services, tone-aware copy ── */
 function ScreenPricing({ tone, label }) {
+  // Pricing structure varies by stage — features and emphasis adapt
   const tiers = {
     exploring: {
       title: 'For those still reading the country',
@@ -744,14 +805,16 @@ function ScreenPricing({ tone, label }) {
 
       <div style={{ position: 'absolute', inset: 0, padding: '108px 22px 30px',
         display: 'flex', flexDirection: 'column', gap: 18, overflow: 'auto' }}>
+        {/* Header */}
         <div>
           <div style={{
-            fontFamily: tone.mono, fontSize: 9, letterSpacing: '0.3em',
+            fontFamily: tone.mono, fontSize: 13, letterSpacing: '0.3em',
             color: tone.mute, textTransform: 'uppercase',
           }}>Established prices</div>
           <div style={{
-            fontFamily: tone.serif, fontWeight: 300, fontSize: 24,
-            lineHeight: 1.15, letterSpacing: '-0.015em', marginTop: 6, color: tone.ink,
+            fontFamily: tone.serif, fontWeight: 300, fontSize: 34,
+            lineHeight: 1.15, letterSpacing: '-0.015em', marginTop: 8,
+            color: tone.ink,
           }}>
             {data.title.split(' ').slice(0, -2).join(' ')}{' '}
             <em style={{ color: tone.accent, fontStyle: 'italic' }}>
@@ -759,11 +822,12 @@ function ScreenPricing({ tone, label }) {
             </em>
           </div>
           <div style={{
-            fontFamily: tone.serif, fontStyle: 'italic', fontSize: 13,
-            color: tone.mute, marginTop: 8, lineHeight: 1.4,
+            fontFamily: tone.serif, fontStyle: 'italic', fontSize: 18,
+            color: tone.mute, marginTop: 10, lineHeight: 1.4,
           }}>{data.lede}</div>
         </div>
 
+        {/* Tiers */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {data.tiers.map((tier, i) => (
             <div key={i} style={{
@@ -774,53 +838,64 @@ function ScreenPricing({ tone, label }) {
             }}>
               {tier.highlighted && (
                 <div style={{
-                  position: 'absolute', top: -7, right: 12,
-                  padding: '2px 8px', background: tone.accent,
-                  fontFamily: tone.mono, fontSize: 8, color: tone.bg,
-                  letterSpacing: '0.18em', textTransform: 'uppercase',
+                  position: 'absolute', top: -10, right: 14,
+                  padding: '4px 10px', background: tone.accent,
+                  fontFamily: tone.mono, fontSize: 12, color: tone.bg,
+                  letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 600,
                 }}>Most chosen</div>
               )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between',
+                alignItems: 'baseline', gap: 8 }}>
                 <div style={{
                   fontFamily: tone.serif, fontStyle: 'italic',
-                  fontSize: 18, color: tone.ink, fontWeight: 400,
+                  fontSize: 26, color: tone.ink, fontWeight: 400,
                 }}>{tier.name}</div>
                 <div style={{ textAlign: 'right' }}>
                   <span style={{
-                    fontFamily: tone.serif, fontSize: 22, color: tone.accent,
+                    fontFamily: tone.serif, fontSize: 30, color: tone.accent,
                     fontWeight: 400, letterSpacing: '-0.01em',
                   }}>{tier.price}</span>
                   {tier.period && (
                     <span style={{
-                      fontFamily: tone.mono, fontSize: 9, color: tone.mute,
-                      letterSpacing: '0.12em', marginLeft: 4,
+                      fontFamily: tone.mono, fontSize: 13, color: tone.mute,
+                      letterSpacing: '0.12em', marginLeft: 5,
                     }}>{tier.period}</span>
                   )}
                 </div>
               </div>
+
               <div style={{
-                display: 'flex', flexDirection: 'column', gap: 4,
-                marginTop: 12, paddingTop: 10, borderTop: `1px solid ${tone.line}`,
+                display: 'flex', flexDirection: 'column', gap: 6,
+                marginTop: 14, paddingTop: 12, borderTop: `1px solid ${tone.line}`,
               }}>
                 {tier.features.map((f, j) => (
                   <div key={j} style={{
-                    display: 'flex', gap: 8, alignItems: 'flex-start',
-                    fontFamily: tone.sans, fontSize: 11.5, color: tone.ink, lineHeight: 1.4,
+                    display: 'flex', gap: 10, alignItems: 'flex-start',
+                    fontFamily: tone.sans, fontSize: 16, color: tone.ink,
+                    lineHeight: 1.4,
                   }}>
-                    <span style={{ color: tone.accent, fontSize: 9, marginTop: 4, flexShrink: 0 }}>—</span>
+                    <span style={{
+                      color: tone.accent, fontSize: 13, marginTop: 4, flexShrink: 0,
+                    }}>—</span>
                     <span>{f}</span>
                   </div>
                 ))}
               </div>
+
               <button
-                onClick={() => { window.AppState?.selectTier(tier.name); window.AppState?.navigate('chat'); }}
+                onClick={() => {
+                  window.AppState?.selectTier(tier.name);
+                  window.AppState?.navigate('chat');
+                }}
                 style={{
-                  marginTop: 14, width: '100%', padding: '10px',
+                  marginTop: 18, width: '100%', padding: '22px',
                   background: tier.highlighted ? tone.accent : 'transparent',
                   color: tier.highlighted ? tone.bg : tone.ink,
                   border: tier.highlighted ? 'none' : `1px solid ${tone.line}`,
-                  fontFamily: tone.sans, fontSize: 10, fontWeight: 600,
-                  letterSpacing: '0.22em', textTransform: 'uppercase', cursor: 'pointer',
+                  fontFamily: tone.sans, fontSize: 16, fontWeight: 700,
+                  letterSpacing: '0.24em', textTransform: 'uppercase',
+                  cursor: 'pointer',
                 }}>
                 {tier.cta}
               </button>
@@ -828,9 +903,10 @@ function ScreenPricing({ tone, label }) {
           ))}
         </div>
 
+        {/* Footer note */}
         <div style={{
-          marginTop: 'auto', paddingTop: 14, borderTop: `1px solid ${tone.line}`,
-          fontFamily: tone.serif, fontStyle: 'italic', fontSize: 12,
+          marginTop: 'auto', paddingTop: 16, borderTop: `1px solid ${tone.line}`,
+          fontFamily: tone.serif, fontStyle: 'italic', fontSize: 16,
           color: tone.mute, lineHeight: 1.5,
         }}>
           Prices in USD. Adjustable to your circumstances — speak to your concierge.
