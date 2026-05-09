@@ -26,7 +26,7 @@ function ToneBackground({ tone }) {
   );
 }
 
-// Status bar text aligned to tone — tap left side to go back when AppState available
+// Status bar text aligned to tone — tap left side to go back, right glyph → account
 function StatusEcho({ tone, showBack = false }) {
   return (
     <div style={{
@@ -43,7 +43,11 @@ function StatusEcho({ tone, showBack = false }) {
         {showBack && <span style={{ fontSize: 14, lineHeight: 1, marginTop: -1 }}>‹</span>}
         Concierge · {tone.name}
       </span>
-      <span style={{ fontSize: 14 }}>{tone.glyph}</span>
+      <span
+        onClick={() => window.AppState?.navigate('account')}
+        style={{ fontSize: 14, cursor: 'pointer' }}>
+        {tone.glyph}
+      </span>
     </div>
   );
 }
@@ -64,9 +68,6 @@ function ScreenWelcome({ tone, label }) {
     return () => s.destroy();
   }, [isExploring, tone.accent, tone.accent2, tone.bg]);
 
-  // For non-exploring tones, render an ambient PhantomShield-style particle
-  // funnel as a low-opacity backdrop — flowing upward, color-tinted to the
-  // current tone. Sits behind the UI; never obstructs interaction.
   useEffect(() => {
     if (isExploring || !vortexRef.current) return;
     if (!window.PhantomStreamScene) return;
@@ -84,13 +85,9 @@ function ScreenWelcome({ tone, label }) {
     }}>
       <ToneBackground tone={tone}/>
 
-      {/* Subtle vortex/meridian for non-exploring tones — same visual
-         language as the chat thread, but small and ambient. Bottom-right,
-         small footprint, low opacity — feels like a quiet system pulse. */}
       {!isExploring && (
         <canvas ref={vortexRef} style={{
-          position: 'absolute',
-          inset: 0,
+          position: 'absolute', inset: 0,
           width: '100%', height: '100%',
           opacity: 0.5, pointerEvents: 'none', zIndex: 1,
           mixBlendMode: 'screen',
@@ -105,8 +102,6 @@ function ScreenWelcome({ tone, label }) {
             opacity: 0.78, pointerEvents: 'none', zIndex: 1,
           }}/>
 
-          {/* MazeHQ-style ambient hotspots — dotted concentric rings,
-              scattered, low opacity. Tighter / fewer than before. */}
           <svg style={{
             position: 'absolute', inset: 0, width: '100%', height: '100%',
             zIndex: 1, pointerEvents: 'none', mixBlendMode: 'screen',
@@ -137,8 +132,6 @@ function ScreenWelcome({ tone, label }) {
               strokeWidth="0.5" strokeDasharray="1.26 1.89"/>
           </svg>
 
-          {/* MazeHQ event chips — Panama metadata floating like CVE events on PhantomShield.
-              Each chip taggs a place with the qualities we'd surface for it. */}
           {[
             { top: 350, left: 18,  delay: '0s',   text: 'BOQUETE · 1,200m',
               tags: [['Climate', 'gold'], ['Cloud forest', 'gold']] },
@@ -199,8 +192,8 @@ function ScreenWelcome({ tone, label }) {
       <StatusEcho tone={tone}/>
 
       <div style={{
-        position: 'absolute', inset: 0, padding: '120px 32px 60px',
-        display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+        position: 'absolute', inset: 0, padding: '120px 32px 56px',
+        display: 'flex', flexDirection: 'column',
         zIndex: 2,
       }}>
         {/* Wordmark */}
@@ -234,16 +227,21 @@ function ScreenWelcome({ tone, label }) {
           </div>
         </div>
 
-        {/* Decorative element */}
+        {/* Thin decorative divider with stage glyph */}
         <div style={{
-          alignSelf: 'center', fontSize: 78, color: tone.accent, opacity: 0.55,
-          letterSpacing: '0.2em',
+          display: 'flex', alignItems: 'center', gap: 16,
+          margin: '30px 0', opacity: 0.38,
         }}>
-          {tone.glyph}
+          <div style={{ flex: 1, height: '0.5px', background: tone.accent }}/>
+          <span style={{
+            fontFamily: tone.mono, fontSize: 15, color: tone.accent,
+            letterSpacing: '0.2em',
+          }}>{tone.glyph}</span>
+          <div style={{ flex: 1, height: '0.5px', background: tone.accent }}/>
         </div>
 
         {/* CTA */}
-        <div>
+        <div style={{ marginTop: 'auto' }}>
           <div style={{
             fontFamily: tone.serif, fontStyle: 'italic', fontSize: 21,
             color: tone.mute, marginBottom: 22, lineHeight: 1.5,
@@ -309,7 +307,7 @@ function ScreenStagePicker({ tone, label }) {
             const active = s.id === tone.id;
             return (
               <div key={s.id}
-                onClick={() => { window.AppState?.selectStage(s.id); window.AppState?.confirmStage(); }}
+                onClick={() => { window.AppState?.selectStage(s.id); window.AppState?.confirmStage(); window.AppState?.navigate('desk'); }}
                 style={{
                   padding: '22px 22px',
                   background: active ? `${tone.accent}14` : tone.surface,
@@ -327,7 +325,7 @@ function ScreenStagePicker({ tone, label }) {
                   <div style={{
                     fontFamily: tone.serif, fontStyle: 'italic',
                     fontSize: 24, fontWeight: 400,
-                    color: active ? tone.ink : tone.ink, lineHeight: 1.2,
+                    color: tone.ink, lineHeight: 1.2,
                   }}>{s.label}</div>
                   <div style={{
                     fontFamily: tone.sans, fontSize: 15, color: tone.mute,
@@ -506,11 +504,8 @@ function ScreenChat({ tone, label }) {
   const [liveHistory, setLiveHistory] = useState(null);
   const scrollRef = useRef(null);
 
-  // Seed chatHistory with static thread on first mount (if empty),
-  // then subscribe so new messages append to it.
   useEffect(() => {
     if (!window.AppState) return;
-    // Convert static seed thread to chatHistory format and seed if empty
     const seedMessages = thread.map((m, i) => ({
       id: Date.now() + i,
       role: m.from === 'me' ? 'user' : 'maria',
@@ -518,7 +513,6 @@ function ScreenChat({ tone, label }) {
       ts: new Date(),
     }));
     window.AppState.seedChat(seedMessages);
-    // Now subscribe to live history
     const unsub = window.AppState.subscribe(s => {
       if (s.chatHistory && s.chatHistory.length > 0) {
         setLiveHistory(s.chatHistory);
@@ -526,17 +520,14 @@ function ScreenChat({ tone, label }) {
     });
     return () => unsub && unsub();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tone.id]); // re-seed when stage changes
+  }, [tone.id]);
 
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [liveHistory]);
 
-  // Three.js: when an Exploring client first opens the chat, particles vortex
-  // inward to a pulsing meridian — the concierge "tuning in" to their questions.
   useEffect(() => {
     if (!isExploring || !canvasRef.current) return;
     if (!window.ExploringQuestionsScene) return;
@@ -635,20 +626,16 @@ function ScreenChat({ tone, label }) {
               {tone.id === 'thriving' && 'Members\' Office'}
             </div>
           </div>
-          <div style={{
-            fontSize: 22, color: tone.accent, opacity: 0.7,
-          }}>{tone.glyph}</div>
+          <div style={{ fontSize: 22, color: tone.accent, opacity: 0.7 }}>{tone.glyph}</div>
         </div>
 
-        {/* Messages — live from AppState or static seed */}
+        {/* Messages */}
         <div ref={scrollRef} style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, overflowY: 'auto' }}>
           {(liveHistory
             ? liveHistory.map((m, i) => {
                 const me = m.role === 'user';
                 return (
-                  <div key={m.id || i} style={{
-                    display: 'flex', justifyContent: me ? 'flex-end' : 'flex-start',
-                  }}>
+                  <div key={m.id || i} style={{ display: 'flex', justifyContent: me ? 'flex-end' : 'flex-start' }}>
                     <div style={{
                       maxWidth: '82%', padding: '15px 19px',
                       background: me ? `${tone.accent}26` : tone.surface,
@@ -657,18 +644,14 @@ function ScreenChat({ tone, label }) {
                       fontSize: me ? 16 : 18,
                       color: tone.ink, lineHeight: 1.45,
                       letterSpacing: me ? '0' : '-0.005em',
-                    }}>
-                      {m.text}
-                    </div>
+                    }}>{m.text}</div>
                   </div>
                 );
               })
             : thread.map((m, i) => {
                 const me = m.from === 'me';
                 return (
-                  <div key={i} style={{
-                    display: 'flex', justifyContent: me ? 'flex-end' : 'flex-start',
-                  }}>
+                  <div key={i} style={{ display: 'flex', justifyContent: me ? 'flex-end' : 'flex-start' }}>
                     <div style={{
                       maxWidth: '82%', padding: '15px 19px',
                       background: me ? `${tone.accent}26` : tone.surface,
@@ -677,9 +660,7 @@ function ScreenChat({ tone, label }) {
                       fontSize: me ? 16 : 18,
                       color: tone.ink, lineHeight: 1.45,
                       letterSpacing: me ? '0' : '-0.005em',
-                    }}>
-                      {m.t}
-                    </div>
+                    }}>{m.t}</div>
                   </div>
                 );
               })
@@ -726,11 +707,158 @@ function ScreenChat({ tone, label }) {
   );
 }
 
-window.ConciergeScreens = { ScreenWelcome, ScreenStagePicker, ScreenDesk, ScreenChat, ScreenPricing };
+/* ── Screen 6: Account / Profile ── */
+function ScreenAccount({ tone }) {
+  return (
+    <div style={{
+      position: 'relative', width: '100%', height: '100%',
+      color: tone.ink, overflow: 'hidden',
+    }}>
+      <ToneBackground tone={tone}/>
+      <StatusEcho tone={tone} showBack={true}/>
+
+      <div style={{
+        position: 'absolute', inset: 0, padding: '108px 24px 44px',
+        display: 'flex', flexDirection: 'column', overflowY: 'auto',
+      }}>
+
+        {/* Avatar + name */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28 }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: '50%',
+            background: `linear-gradient(135deg, ${tone.accent}, ${tone.accent2 || tone.accent})`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: tone.serif, fontStyle: 'italic', fontSize: 28,
+            color: tone.bg, fontWeight: 500, flexShrink: 0,
+          }}>D</div>
+          <div>
+            <div style={{
+              fontFamily: tone.serif, fontSize: 26, color: tone.ink,
+              letterSpacing: '-0.01em',
+            }}>David</div>
+            <div style={{
+              fontFamily: tone.mono, fontSize: 11, color: tone.mute,
+              letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 5,
+            }}>Member · Panama</div>
+          </div>
+        </div>
+
+        {/* Current stage badge */}
+        <div style={{
+          padding: '16px 20px', marginBottom: 28,
+          background: `${tone.accent}12`,
+          border: `1px solid ${tone.accent}55`,
+          display: 'flex', alignItems: 'center', gap: 14,
+        }}>
+          <span style={{ fontSize: 22, color: tone.accent }}>{tone.glyph}</span>
+          <div style={{ flex: 1 }}>
+            <div style={{
+              fontFamily: tone.mono, fontSize: 11, color: tone.mute,
+              letterSpacing: '0.22em', textTransform: 'uppercase',
+            }}>Current stage</div>
+            <div style={{
+              fontFamily: tone.serif, fontStyle: 'italic', fontSize: 20,
+              color: tone.accent, marginTop: 3,
+            }}>{tone.name}</div>
+          </div>
+          <div
+            onClick={() => window.AppState?.navigate('picker')}
+            style={{
+              fontFamily: tone.mono, fontSize: 11, color: tone.accent,
+              letterSpacing: '0.18em', textTransform: 'uppercase',
+              cursor: 'pointer', borderBottom: `1px solid ${tone.accent}55`,
+              paddingBottom: 1,
+            }}>CHANGE</div>
+        </div>
+
+        {/* Primary nav links */}
+        {[
+          { glyph: '◈', label: 'The Desk',        sub: 'Your active services',       screen: 'desk'    },
+          { glyph: '◇', label: 'Your concierge',  sub: 'Messages & current thread',  screen: 'chat'    },
+          { glyph: '◉', label: 'Plans & pricing', sub: 'Services and membership',    screen: 'pricing' },
+        ].map((item, i) => (
+          <div
+            key={i}
+            onClick={() => window.AppState?.navigate(item.screen)}
+            style={{
+              padding: '18px 0',
+              borderBottom: `1px solid ${tone.line}`,
+              display: 'flex', alignItems: 'center', gap: 14,
+              cursor: 'pointer',
+            }}>
+            <span style={{
+              fontSize: 15, color: tone.accent, width: 20,
+              textAlign: 'center', flexShrink: 0,
+            }}>{item.glyph}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{
+                fontFamily: tone.serif, fontSize: 21, color: tone.ink,
+                letterSpacing: '-0.005em',
+              }}>{item.label}</div>
+              <div style={{
+                fontFamily: tone.sans, fontSize: 13, color: tone.mute,
+                marginTop: 3, letterSpacing: '0.03em',
+              }}>{item.sub}</div>
+            </div>
+            <div style={{
+              fontFamily: tone.mono, fontSize: 18, color: tone.accent,
+            }}>›</div>
+          </div>
+        ))}
+
+        {/* Preferences */}
+        <div style={{ marginTop: 26 }}>
+          <div style={{
+            fontFamily: tone.mono, fontSize: 11, color: tone.mute,
+            letterSpacing: '0.26em', textTransform: 'uppercase', marginBottom: 14,
+          }}>Preferences</div>
+          {[
+            { label: 'Notifications', value: 'Weekly digest' },
+            { label: 'Language',      value: 'English'       },
+            { label: 'Currency',      value: 'USD'           },
+          ].map((p, i) => (
+            <div key={i} style={{
+              padding: '14px 0',
+              borderBottom: `1px solid ${tone.line}`,
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}>
+              <div style={{ fontFamily: tone.sans, fontSize: 16, color: tone.ink }}>{p.label}</div>
+              <div style={{
+                fontFamily: tone.mono, fontSize: 12, color: tone.mute,
+                letterSpacing: '0.14em',
+              }}>{p.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Sign out */}
+        <div style={{ marginTop: 'auto', paddingTop: 28 }}>
+          <div
+            onClick={() => window.AppState?.navigate('welcome')}
+            style={{
+              padding: '16px 0',
+              borderTop: `1px solid ${tone.line}`,
+              cursor: 'pointer',
+            }}>
+            <div style={{
+              fontFamily: tone.serif, fontStyle: 'italic', fontSize: 18,
+              color: tone.mute,
+            }}>Leave the room</div>
+          </div>
+          <div style={{
+            fontFamily: tone.mono, fontSize: 10, color: tone.mute,
+            letterSpacing: '0.18em', opacity: 0.4, marginTop: 10,
+          }}>v1.0 · Panama Lifestyle OS</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+window.ConciergeScreens = { ScreenWelcome, ScreenStagePicker, ScreenDesk, ScreenChat, ScreenPricing, ScreenAccount };
 
 /* ── Screen 5: Pricing — tiered services, tone-aware copy ── */
 function ScreenPricing({ tone, label }) {
-  // Pricing structure varies by stage — features and emphasis adapt
   const tiers = {
     exploring: {
       title: 'For those still reading the country',
@@ -875,9 +1003,7 @@ function ScreenPricing({ tone, label }) {
                     fontFamily: tone.sans, fontSize: 16, color: tone.ink,
                     lineHeight: 1.4,
                   }}>
-                    <span style={{
-                      color: tone.accent, fontSize: 13, marginTop: 4, flexShrink: 0,
-                    }}>—</span>
+                    <span style={{ color: tone.accent, fontSize: 13, marginTop: 4, flexShrink: 0 }}>—</span>
                     <span>{f}</span>
                   </div>
                 ))}
