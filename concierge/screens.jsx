@@ -26,7 +26,7 @@ function ToneBackground({ tone }) {
   );
 }
 
-// Status bar text aligned to tone — tap left side to go back, right glyph → account
+// Status bar text aligned to tone — tap left side to go back when AppState available
 function StatusEcho({ tone, showBack = false }) {
   return (
     <div style={{
@@ -58,7 +58,6 @@ function ScreenWelcome({ tone, label }) {
   const vortexRef = useRef(null);
   const isExploring = tone.id === 'exploring';
 
-  // Three.js intro plays only on Exploring tone — the first impression.
   useEffect(() => {
     if (!isExploring || !canvasRef.current) return;
     if (!window.ExploringOrbScene) return;
@@ -87,7 +86,8 @@ function ScreenWelcome({ tone, label }) {
 
       {!isExploring && (
         <canvas ref={vortexRef} style={{
-          position: 'absolute', inset: 0,
+          position: 'absolute',
+          inset: 0,
           width: '100%', height: '100%',
           opacity: 0.5, pointerEvents: 'none', zIndex: 1,
           mixBlendMode: 'screen',
@@ -196,7 +196,6 @@ function ScreenWelcome({ tone, label }) {
         display: 'flex', flexDirection: 'column',
         zIndex: 2,
       }}>
-        {/* Wordmark */}
         <div>
           <div style={{
             fontFamily: tone.mono, fontSize: 13, letterSpacing: '0.32em',
@@ -227,7 +226,6 @@ function ScreenWelcome({ tone, label }) {
           </div>
         </div>
 
-        {/* Thin decorative divider with stage glyph */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 16,
           margin: '30px 0', opacity: 0.38,
@@ -240,7 +238,6 @@ function ScreenWelcome({ tone, label }) {
           <div style={{ flex: 1, height: '0.5px', background: tone.accent }}/>
         </div>
 
-        {/* CTA */}
         <div style={{ marginTop: 'auto' }}>
           <div style={{
             fontFamily: tone.serif, fontStyle: 'italic', fontSize: 21,
@@ -325,7 +322,7 @@ function ScreenStagePicker({ tone, label }) {
                   <div style={{
                     fontFamily: tone.serif, fontStyle: 'italic',
                     fontSize: 24, fontWeight: 400,
-                    color: tone.ink, lineHeight: 1.2,
+                    color: active ? tone.ink : tone.ink, lineHeight: 1.2,
                   }}>{s.label}</div>
                   <div style={{
                     fontFamily: tone.sans, fontSize: 15, color: tone.mute,
@@ -401,7 +398,6 @@ function ScreenDesk({ tone, label }) {
 
       <div style={{ position: 'absolute', inset: 0, padding: '110px 24px 30px',
         display: 'flex', flexDirection: 'column', gap: 18 }}>
-        {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
           <div>
             <div style={{
@@ -436,7 +432,6 @@ function ScreenDesk({ tone, label }) {
           </div>
         </div>
 
-        {/* List */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 1,
           background: tone.line, padding: 1 }}>
           {items.map((s, i) => (
@@ -467,7 +462,6 @@ function ScreenDesk({ tone, label }) {
           ))}
         </div>
 
-        {/* Footer note */}
         <div
           onClick={() => window.AppState?.navigate('chat')}
           style={{
@@ -519,7 +513,6 @@ function ScreenChat({ tone, label }) {
       }
     });
     return () => unsub && unsub();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tone.id]);
 
   useEffect(() => {
@@ -586,7 +579,6 @@ function ScreenChat({ tone, label }) {
 
       <div style={{ position: 'absolute', inset: 0, padding: '108px 20px 80px',
         display: 'flex', flexDirection: 'column', gap: 14, zIndex: 2 }}>
-        {/* Concierge header */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 12,
           paddingBottom: 12, borderBottom: `1px solid ${tone.line}`,
@@ -626,16 +618,19 @@ function ScreenChat({ tone, label }) {
               {tone.id === 'thriving' && 'Members\' Office'}
             </div>
           </div>
-          <div style={{ fontSize: 22, color: tone.accent, opacity: 0.7 }}>{tone.glyph}</div>
+          <div style={{
+            fontSize: 22, color: tone.accent, opacity: 0.7,
+          }}>{tone.glyph}</div>
         </div>
 
-        {/* Messages */}
         <div ref={scrollRef} style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, overflowY: 'auto' }}>
           {(liveHistory
             ? liveHistory.map((m, i) => {
                 const me = m.role === 'user';
                 return (
-                  <div key={m.id || i} style={{ display: 'flex', justifyContent: me ? 'flex-end' : 'flex-start' }}>
+                  <div key={m.id || i} style={{
+                    display: 'flex', justifyContent: me ? 'flex-end' : 'flex-start',
+                  }}>
                     <div style={{
                       maxWidth: '82%', padding: '15px 19px',
                       background: me ? `${tone.accent}26` : tone.surface,
@@ -644,14 +639,18 @@ function ScreenChat({ tone, label }) {
                       fontSize: me ? 16 : 18,
                       color: tone.ink, lineHeight: 1.45,
                       letterSpacing: me ? '0' : '-0.005em',
-                    }}>{m.text}</div>
+                    }}>
+                      {m.text}
+                    </div>
                   </div>
                 );
               })
             : thread.map((m, i) => {
                 const me = m.from === 'me';
                 return (
-                  <div key={i} style={{ display: 'flex', justifyContent: me ? 'flex-end' : 'flex-start' }}>
+                  <div key={i} style={{
+                    display: 'flex', justifyContent: me ? 'flex-end' : 'flex-start',
+                  }}>
                     <div style={{
                       maxWidth: '82%', padding: '15px 19px',
                       background: me ? `${tone.accent}26` : tone.surface,
@@ -660,14 +659,15 @@ function ScreenChat({ tone, label }) {
                       fontSize: me ? 16 : 18,
                       color: tone.ink, lineHeight: 1.45,
                       letterSpacing: me ? '0' : '-0.005em',
-                    }}>{m.t}</div>
+                    }}>
+                      {m.t}
+                    </div>
                   </div>
                 );
               })
           )}
         </div>
 
-        {/* Composer */}
         <div style={{
           position: 'absolute', left: 20, right: 20, bottom: 30,
           padding: '16px 22px', background: tone.surface,
@@ -722,7 +722,6 @@ function ScreenAccount({ tone }) {
         display: 'flex', flexDirection: 'column', overflowY: 'auto',
       }}>
 
-        {/* Avatar + name */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28 }}>
           <div style={{
             width: 64, height: 64, borderRadius: '50%',
@@ -743,7 +742,6 @@ function ScreenAccount({ tone }) {
           </div>
         </div>
 
-        {/* Current stage badge */}
         <div style={{
           padding: '16px 20px', marginBottom: 28,
           background: `${tone.accent}12`,
@@ -771,11 +769,10 @@ function ScreenAccount({ tone }) {
             }}>CHANGE</div>
         </div>
 
-        {/* Primary nav links */}
         {[
-          { glyph: '◈', label: 'The Desk',        sub: 'Your active services',       screen: 'desk'    },
-          { glyph: '◇', label: 'Your concierge',  sub: 'Messages & current thread',  screen: 'chat'    },
-          { glyph: '◉', label: 'Plans & pricing', sub: 'Services and membership',    screen: 'pricing' },
+          { glyph: '◈', label: 'The Desk',         sub: 'Your active services',        screen: 'desk'    },
+          { glyph: '◇', label: 'Your concierge',   sub: 'Messages & current thread',   screen: 'chat'    },
+          { glyph: '◉', label: 'Plans & pricing',  sub: 'Services and membership',     screen: 'pricing' },
         ].map((item, i) => (
           <div
             key={i}
@@ -806,7 +803,6 @@ function ScreenAccount({ tone }) {
           </div>
         ))}
 
-        {/* Preferences */}
         <div style={{ marginTop: 26 }}>
           <div style={{
             fontFamily: tone.mono, fontSize: 11, color: tone.mute,
@@ -822,7 +818,9 @@ function ScreenAccount({ tone }) {
               borderBottom: `1px solid ${tone.line}`,
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             }}>
-              <div style={{ fontFamily: tone.sans, fontSize: 16, color: tone.ink }}>{p.label}</div>
+              <div style={{
+                fontFamily: tone.sans, fontSize: 16, color: tone.ink,
+              }}>{p.label}</div>
               <div style={{
                 fontFamily: tone.mono, fontSize: 12, color: tone.mute,
                 letterSpacing: '0.14em',
@@ -831,7 +829,6 @@ function ScreenAccount({ tone }) {
           ))}
         </div>
 
-        {/* Sign out */}
         <div style={{ marginTop: 'auto', paddingTop: 28 }}>
           <div
             onClick={() => window.AppState?.navigate('welcome')}
@@ -933,7 +930,6 @@ function ScreenPricing({ tone, label }) {
 
       <div style={{ position: 'absolute', inset: 0, padding: '108px 22px 30px',
         display: 'flex', flexDirection: 'column', gap: 18, overflow: 'auto' }}>
-        {/* Header */}
         <div>
           <div style={{
             fontFamily: tone.mono, fontSize: 13, letterSpacing: '0.3em',
@@ -955,7 +951,6 @@ function ScreenPricing({ tone, label }) {
           }}>{data.lede}</div>
         </div>
 
-        {/* Tiers */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {data.tiers.map((tier, i) => (
             <div key={i} style={{
@@ -1003,7 +998,9 @@ function ScreenPricing({ tone, label }) {
                     fontFamily: tone.sans, fontSize: 16, color: tone.ink,
                     lineHeight: 1.4,
                   }}>
-                    <span style={{ color: tone.accent, fontSize: 13, marginTop: 4, flexShrink: 0 }}>—</span>
+                    <span style={{
+                      color: tone.accent, fontSize: 13, marginTop: 4, flexShrink: 0,
+                    }}>—</span>
                     <span>{f}</span>
                   </div>
                 ))}
@@ -1029,7 +1026,6 @@ function ScreenPricing({ tone, label }) {
           ))}
         </div>
 
-        {/* Footer note */}
         <div style={{
           marginTop: 'auto', paddingTop: 16, borderTop: `1px solid ${tone.line}`,
           fontFamily: tone.serif, fontStyle: 'italic', fontSize: 16,
