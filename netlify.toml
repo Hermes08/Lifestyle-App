@@ -1,6 +1,17 @@
 [build]
   publish = "."
 
+# Root and /index.html redirect to the app
+[[redirects]]
+  from = "/"
+  to = "/app.html"
+  status = 200
+
+[[redirects]]
+  from = "/index"
+  to = "/app.html"
+  status = 302
+
 [[headers]]
   for = "/*"
   [headers.values]
