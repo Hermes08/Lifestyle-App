@@ -1,11 +1,11 @@
 /**
- * app-state.js v4 — Panama Lifestyle OS · Application State
+ * app-state.js v5 — Panama Lifestyle OS · Application State
  *
  * Pure-JS event store. No external dependencies.
  * v4 additions: localStorage persistence, returnCount, per-stage checklist,
  * updateChecklistItem, markDone, dismissFollowUp, _computeFollowUp algorithm.
  * v5 additions: providers directory with CRUD (addProvider, updateProvider,
- * deleteProvider), userName/userEmail in state, 5 test-user profiles.
+ * deleteProvider), userName/userEmail in state.
  *
  * Exposed as: window.AppState
  */
@@ -82,93 +82,45 @@
 
   var FOLLOW_UP_STEPS = {
     exploring: [
-      { id: 'fu_e1',
-        msg: 'Your neighborhood letters are waiting — Casco, Punta Pacífica, and Coronado.',
-        ctaLabel: 'Read letters', ctaScreen: 'chat',
-        cond: function (c) { return !_isCompleted('e3', c); } },
-      { id: 'fu_e2',
-        msg: 'Compare your shortlisted areas and mark the one that speaks to you.',
-        ctaLabel: 'View roadmap', ctaScreen: 'checklist',
-        cond: function (c) { return _isCompleted('e3', c) && !_isCompleted('e4', c); } },
-      { id: 'fu_e3',
-        msg: 'Ready to see Panama in person? Eduardo can arrange a private discovery trip.',
-        ctaLabel: 'Schedule trip', ctaScreen: 'chat',
-        cond: function (c) { return _isCompleted('e4', c) && !_isCompleted('e6', c); } },
-      { id: 'fu_e4',
-        msg: "You've done the research. Time to shortlist your top 2 neighborhoods.",
-        ctaLabel: 'Update roadmap', ctaScreen: 'checklist',
-        cond: function (c) { return _isCompleted('e6', c) && !_isCompleted('e7', c); } },
+      { id: 'fu_e1', msg: 'Your neighborhood letters are waiting — Casco, Punta Pacífica, and Coronado.', ctaLabel: 'Read letters', ctaScreen: 'chat', cond: function (c) { return !_isCompleted('e3', c); } },
+      { id: 'fu_e2', msg: 'Compare your shortlisted areas and mark the one that speaks to you.', ctaLabel: 'View roadmap', ctaScreen: 'checklist', cond: function (c) { return _isCompleted('e3', c) && !_isCompleted('e4', c); } },
+      { id: 'fu_e3', msg: 'Ready to see Panama in person? Eduardo can arrange a private discovery trip.', ctaLabel: 'Schedule trip', ctaScreen: 'chat', cond: function (c) { return _isCompleted('e4', c) && !_isCompleted('e6', c); } },
+      { id: 'fu_e4', msg: "You've done the research. Time to shortlist your top 2 neighborhoods.", ctaLabel: 'Update roadmap', ctaScreen: 'checklist', cond: function (c) { return _isCompleted('e6', c) && !_isCompleted('e7', c); } },
     ],
     arriving: [
-      { id: 'fu_a1',
-        msg: 'A few logistics to confirm before you fly — let\'s review your arrival plan.',
-        ctaLabel: 'View roadmap', ctaScreen: 'checklist',
-        cond: function (c) { return !_isCompleted('a1', c); } },
-      { id: 'fu_a2',
-        msg: 'Customs documents need to be in order 10 days before arrival. Sofia can help.',
-        ctaLabel: 'Message Sofia', ctaScreen: 'chat',
-        cond: function (c) { return _isCompleted('a1', c) && !_isCompleted('a5', c); } },
-      { id: 'fu_a3',
-        msg: 'Your first-week itinerary is drafted — review it before you land.',
-        ctaLabel: 'Review plan', ctaScreen: 'checklist',
-        cond: function (c) { return _isCompleted('a5', c) && !_isCompleted('a4', c); } },
+      { id: 'fu_a1', msg: "A few logistics to confirm before you fly — let's review your arrival plan.", ctaLabel: 'View roadmap', ctaScreen: 'checklist', cond: function (c) { return !_isCompleted('a1', c); } },
+      { id: 'fu_a2', msg: 'Customs documents need to be in order 10 days before arrival. Sofia can help.', ctaLabel: 'Message Sofia', ctaScreen: 'chat', cond: function (c) { return _isCompleted('a1', c) && !_isCompleted('a5', c); } },
+      { id: 'fu_a3', msg: 'Your first-week itinerary is drafted — review it before you land.', ctaLabel: 'Review plan', ctaScreen: 'checklist', cond: function (c) { return _isCompleted('a5', c) && !_isCompleted('a4', c); } },
     ],
     settling: [
-      { id: 'fu_s1',
-        msg: 'Week one priority: open your bank account. Luis has the appointment ready.',
-        ctaLabel: 'Confirm appointment', ctaScreen: 'chat',
-        cond: function (c) { return !_isCompleted('s3', c); } },
-      { id: 'fu_s2',
-        msg: 'Schools visited, options shortlisted. Time to decide and enroll.',
-        ctaLabel: 'Update roadmap', ctaScreen: 'checklist',
-        cond: function (c) { return _isCompleted('s4', c) && !_isCompleted('s8', c); } },
-      { id: 'fu_s3',
-        msg: 'Residency paperwork is in motion — your completion is closer than you think.',
-        ctaLabel: 'Check progress', ctaScreen: 'checklist',
-        cond: function (c) { return _isCompleted('s3', c) && !_isCompleted('s7', c); } },
+      { id: 'fu_s1', msg: 'Week one priority: open your bank account. Luis has the appointment ready.', ctaLabel: 'Confirm appointment', ctaScreen: 'chat', cond: function (c) { return !_isCompleted('s3', c); } },
+      { id: 'fu_s2', msg: 'Schools visited, options shortlisted. Time to decide and enroll.', ctaLabel: 'Update roadmap', ctaScreen: 'checklist', cond: function (c) { return _isCompleted('s4', c) && !_isCompleted('s8', c); } },
+      { id: 'fu_s3', msg: 'Residency paperwork is in motion — your completion is closer than you think.', ctaLabel: 'Check progress', ctaScreen: 'checklist', cond: function (c) { return _isCompleted('s3', c) && !_isCompleted('s7', c); } },
     ],
     living: [
-      { id: 'fu_l1',
-        msg: 'Ricardo is ready for your annual tax review — best to do this before June.',
-        ctaLabel: 'Message Ricardo', ctaScreen: 'chat',
-        cond: function (c) { return !_isCompleted('l1', c); } },
-      { id: 'fu_l2',
-        msg: 'Your portfolio review is overdue — a 30-min call with Ricardo makes it simple.',
-        ctaLabel: 'Schedule call', ctaScreen: 'chat',
-        cond: function (c) { return _isCompleted('l1', c) && !_isCompleted('l3', c); } },
-      { id: 'fu_l3',
-        msg: "You're ready for the next level. Review your membership options.",
-        ctaLabel: 'See plans', ctaScreen: 'pricing',
-        cond: function (c) { return _isCompleted('l3', c) && !_isCompleted('l8', c); } },
+      { id: 'fu_l1', msg: 'Ricardo is ready for your annual tax review — best to do this before June.', ctaLabel: 'Message Ricardo', ctaScreen: 'chat', cond: function (c) { return !_isCompleted('l1', c); } },
+      { id: 'fu_l2', msg: 'Your portfolio review is overdue — a 30-min call with Ricardo makes it simple.', ctaLabel: 'Schedule call', ctaScreen: 'chat', cond: function (c) { return _isCompleted('l1', c) && !_isCompleted('l3', c); } },
+      { id: 'fu_l3', msg: "You're ready for the next level. Review your membership options.", ctaLabel: 'See plans', ctaScreen: 'pricing', cond: function (c) { return _isCompleted('l3', c) && !_isCompleted('l8', c); } },
     ],
     thriving: [
-      { id: 'fu_t1',
-        msg: 'Annual estate review — your legal team is standing by.',
-        ctaLabel: 'Arrange meeting', ctaScreen: 'chat',
-        cond: function (c) { return !_isCompleted('t1', c); } },
-      { id: 'fu_t2',
-        msg: 'Three off-market properties match your criteria. A private viewing awaits.',
-        ctaLabel: 'See properties', ctaScreen: 'chat',
-        cond: function (c) { return _isCompleted('t1', c) && !_isCompleted('t3', c); } },
-      { id: 'fu_t3',
-        msg: 'Citizenship is within reach. Let\'s map your exact timeline.',
-        ctaLabel: 'Plan timeline', ctaScreen: 'checklist',
-        cond: function (c) { return _isCompleted('t3', c) && !_isCompleted('t4', c); } },
+      { id: 'fu_t1', msg: 'Annual estate review — your legal team is standing by.', ctaLabel: 'Arrange meeting', ctaScreen: 'chat', cond: function (c) { return !_isCompleted('t1', c); } },
+      { id: 'fu_t2', msg: 'Three off-market properties match your criteria. A private viewing awaits.', ctaLabel: 'See properties', ctaScreen: 'chat', cond: function (c) { return _isCompleted('t1', c) && !_isCompleted('t3', c); } },
+      { id: 'fu_t3', msg: "Citizenship is within reach. Let's map your exact timeline.", ctaLabel: 'Plan timeline', ctaScreen: 'checklist', cond: function (c) { return _isCompleted('t3', c) && !_isCompleted('t4', c); } },
     ],
   };
 
   /* ── Provider directory ──────────────────────────────────────── */
   var INITIAL_PROVIDERS = [
-    { id: 'p1',  name: 'Ricardo Alemán',      category: 'legal',      specialty: 'Tax & Corporate Law',       phone: '+507 6123-4567', email: 'r.aleman@lexpty.com',          tier: 'all',      status: 'active', rating: 5, notes: 'Annual tax review before June. Trusted since 2018.' },
-    { id: 'p2',  name: 'Eduardo Mendoza',     category: 'realestate', specialty: 'Country Curator · 14 yrs',  phone: '+507 6234-5678', email: 'emendoza@panamalifestyle.com', tier: 'explorer', status: 'active', rating: 5, notes: 'First-contact concierge for all new arrivals.' },
-    { id: 'p3',  name: 'Dr. Carlos Morales',  category: 'health',     specialty: 'Family Medicine · Paitilla',phone: '+507 6345-6789', email: 'cmorales@hpaitilla.com',       tier: 'settler',  status: 'active', rating: 4, notes: 'English-speaking. Available Mon–Fri.' },
-    { id: 'p4',  name: 'Captain Roque',       category: 'leisure',    specialty: 'Marina Flamenco · Yachts',  phone: '+507 6456-7890', email: 'roque@marinaflamenco.com',     tier: 'resident', status: 'active', rating: 5, notes: 'Half-day $380, full-day $650. Catering available.' },
-    { id: 'p5',  name: 'Sofía Herrera',       category: 'lifestyle',  specialty: 'Lifestyle Coordinator',     phone: '+507 6567-8901', email: 'sofia@panamalifestyle.com',    tier: 'all',      status: 'active', rating: 5, notes: 'Primary ops concierge. Speaks EN/ES/PT.' },
-    { id: 'p6',  name: 'Luis Pérez',          category: 'finance',    specialty: 'Banking & Account Setup',   phone: '+507 6678-9012', email: 'lperez@banistmo.com',          tier: 'settler',  status: 'active', rating: 4, notes: 'Banistmo Paitilla. Thu appt slots available.' },
-    { id: 'p7',  name: 'Carlos Rodríguez',    category: 'transport',  specialty: 'VIP Airport Transfers',     phone: '+507 6789-0123', email: 'carlos@viptransfers.pa',       tier: 'all',      status: 'active', rating: 5, notes: 'Arrives 20 min before flight. Name sign standard.' },
-    { id: 'p8',  name: 'Patricia Soto',       category: 'legal',      specialty: 'Real Estate Notary',        phone: '+507 6890-1234', email: 'psoto@notariapty.com',         tier: 'resident', status: 'active', rating: 4, notes: 'Required for all property closings in Casco.' },
-    { id: 'p9',  name: 'Dra. Ana Villalobos', category: 'health',     specialty: 'Wellness & Integrative',    phone: '+507 6901-2345', email: 'avillalobos@salud360.pa',      tier: 'resident', status: 'active', rating: 5, notes: 'Nutrition, labs, executive wellness packages.' },
-    { id: 'p10', name: 'Marcos Fong',         category: 'realestate', specialty: 'Investment Properties',     phone: '+507 6012-3456', email: 'mfong@propertiespa.com',       tier: 'legend',   status: 'active', rating: 5, notes: 'Off-market specialist. Casco & Punta Pacífica.' },
+    { id: 'p1',  name: 'Ricardo Alemán',      category: 'legal',      specialty: 'Tax & Corporate Law',        phone: '+507 6123-4567', email: 'r.aleman@lexpty.com',          tier: 'all',      status: 'active', rating: 5, notes: 'Annual tax review before June. Trusted since 2018.' },
+    { id: 'p2',  name: 'Eduardo Mendoza',     category: 'realestate', specialty: 'Country Curator · 14 yrs',   phone: '+507 6234-5678', email: 'emendoza@panamalifestyle.com', tier: 'explorer', status: 'active', rating: 5, notes: 'First-contact concierge for all new arrivals.' },
+    { id: 'p3',  name: 'Dr. Carlos Morales',  category: 'health',     specialty: 'Family Medicine · Paitilla', phone: '+507 6345-6789', email: 'cmorales@hpaitilla.com',       tier: 'settler',  status: 'active', rating: 4, notes: 'English-speaking. Available Mon–Fri.' },
+    { id: 'p4',  name: 'Captain Roque',       category: 'leisure',    specialty: 'Marina Flamenco · Yachts',   phone: '+507 6456-7890', email: 'roque@marinaflamenco.com',     tier: 'resident', status: 'active', rating: 5, notes: 'Half-day $380, full-day $650. Catering available.' },
+    { id: 'p5',  name: 'Sofía Herrera',       category: 'lifestyle',  specialty: 'Lifestyle Coordinator',      phone: '+507 6567-8901', email: 'sofia@panamalifestyle.com',    tier: 'all',      status: 'active', rating: 5, notes: 'Primary ops concierge. Speaks EN/ES/PT.' },
+    { id: 'p6',  name: 'Luis Pérez',          category: 'finance',    specialty: 'Banking & Account Setup',    phone: '+507 6678-9012', email: 'lperez@banistmo.com',          tier: 'settler',  status: 'active', rating: 4, notes: 'Banistmo Paitilla. Thu appt slots available.' },
+    { id: 'p7',  name: 'Carlos Rodríguez',    category: 'transport',  specialty: 'VIP Airport Transfers',      phone: '+507 6789-0123', email: 'carlos@viptransfers.pa',       tier: 'all',      status: 'active', rating: 5, notes: 'Arrives 20 min before flight. Name sign standard.' },
+    { id: 'p8',  name: 'Patricia Soto',       category: 'legal',      specialty: 'Real Estate Notary',         phone: '+507 6890-1234', email: 'psoto@notariapty.com',         tier: 'resident', status: 'active', rating: 4, notes: 'Required for all property closings in Casco.' },
+    { id: 'p9',  name: 'Dra. Ana Villalobos', category: 'health',     specialty: 'Wellness & Integrative',     phone: '+507 6901-2345', email: 'avillalobos@salud360.pa',      tier: 'resident', status: 'active', rating: 5, notes: 'Nutrition, labs, executive wellness packages.' },
+    { id: 'p10', name: 'Marcos Fong',         category: 'realestate', specialty: 'Investment Properties',      phone: '+507 6012-3456', email: 'mfong@propertiespa.com',       tier: 'legend',   status: 'active', rating: 5, notes: 'Off-market specialist. Casco & Punta Pacífica.' },
   ];
 
   function _computeFollowUp(stage, checklistItems) {
@@ -260,7 +212,7 @@
     _subs.push(fn);
     fn(getState());
     return function () {
-      _subs = _subs.filter(function (l) { return l !== l; });
+      _subs = _subs.filter(function (l) { return l !== fn; });
     };
   }
 
@@ -391,7 +343,9 @@
   }
 
   /* ── Pricing ─────────────────────────────────────────────────── */
-  function selectTier(tierId) { addPoints(15); }
+  function selectTier(tierId) {
+    addPoints(15);
+  }
 
   /* ── Providers CRUD ──────────────────────────────────────────── */
   function addProvider(data) {
@@ -441,7 +395,7 @@
       default: 'Tu llegada está próxima. Tengo coordinado el transporte, las llaves del apartamento y el kit de bienvenida. ¿Qué más quieres revisar antes de llegar?',
     },
     settling: {
-      escuela: 'Las dos más recomendadas: King\'s College (Cambridge curriculum, Marbella) y Oxford International (IB, Costa del Este). Ya tengo la visita al King\'s este viernes. ¿Cuántos años tienen tus hijos?',
+      escuela: "Las dos más recomendadas: King's College (Cambridge curriculum, Marbella) y Oxford International (IB, Costa del Este). Ya tengo la visita al King's este viernes. ¿Cuántos años tienen tus hijos?",
       medico:  'Paitilla y Pacífica Salud son los hospitales privados de referencia. Para médico de cabecera, el Dr. Morales en Paitilla habla inglés y tiene citas disponibles esta semana.',
       banco:   'Ya pasaron las 3 semanas — deberías tener factura local ahora. Banistmo Paitilla tiene cita disponible el jueves. ¿Te agendo?',
       docs:    'Para la residencia necesitas: pasaporte apostillado, antecedentes penales apostillados, certificado médico y fotos. El gestor tiene todo en proceso. El sello de apostilla tarda 5 días en EE.UU.',

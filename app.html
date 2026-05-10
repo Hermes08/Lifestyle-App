@@ -91,9 +91,9 @@
   <!-- App modules (order matters) -->
   <script src="concierge/tones.js?v=2"></script>
   <script src="concierge/webgl-exploring.js?v=3"></script>
-  <script src="concierge/app-state.js?v=4"></script>
+  <script src="concierge/app-state.js?v=5"></script>
   <script type="text/babel" src="concierge/ios-frame.jsx?v=2" data-presets="react"></script>
-  <script type="text/babel" src="concierge/screens.jsx?v=5" data-presets="react"></script>
+  <script type="text/babel" src="concierge/screens.jsx?v=6" data-presets="react"></script>
 </head>
 <body>
   <div class="stage">
@@ -121,7 +121,7 @@
         if (window._resizePhone) window._resizePhone();
       }, []);
 
-      const { ScreenWelcome, ScreenStagePicker, ScreenDesk, ScreenChat, ScreenChecklist, ScreenPricing, ScreenAccount } =
+      const { ScreenWelcome, ScreenStagePicker, ScreenDesk, ScreenChat, ScreenChecklist, ScreenPricing, ScreenAccount, ScreenProviders } =
         window.ConciergeScreens;
       const tones = window.CONCIERGE_TONES;
       const tone  = Object.assign({}, tones[st.stage], { id: st.stage });
@@ -134,6 +134,7 @@
         checklist: ScreenChecklist,
         pricing:   ScreenPricing,
         account:   ScreenAccount,
+        providers: ScreenProviders,
       };
       const ActiveScreen = SCREENS[st.screen] || ScreenWelcome;
 
@@ -160,6 +161,10 @@
         updateChecklistItem:  window.AppState.updateChecklistItem,
         markDone:             window.AppState.markDone,
         dismissFollowUp:      window.AppState.dismissFollowUp,
+        addProvider:          window.AppState.addProvider,
+        updateProvider:       window.AppState.updateProvider,
+        deleteProvider:       window.AppState.deleteProvider,
+        setUserProfile:       window.AppState.setUserProfile,
       };
 
       return (
