@@ -91,9 +91,9 @@
   <!-- App modules (order matters) -->
   <script src="concierge/tones.js?v=2"></script>
   <script src="concierge/webgl-exploring.js?v=3"></script>
-  <script src="concierge/app-state.js?v=3"></script>
+  <script src="concierge/app-state.js?v=4"></script>
   <script type="text/babel" src="concierge/ios-frame.jsx?v=2" data-presets="react"></script>
-  <script type="text/babel" src="concierge/screens.jsx?v=4" data-presets="react"></script>
+  <script type="text/babel" src="concierge/screens.jsx?v=5" data-presets="react"></script>
 </head>
 <body>
   <div class="stage">
@@ -101,11 +101,6 @@
   </div>
 
   <script type="text/babel" data-presets="react">
-    /* ── AppRouter ─────────────────────────────────────────────
-       Subscribes to AppState, provides AppCtx, renders the
-       active screen inside IOSDevice with tone-aware styling.
-    ── */
-
     const AppCtx = React.createContext(null);
     window.AppCtx = AppCtx;
 
@@ -126,18 +121,19 @@
         if (window._resizePhone) window._resizePhone();
       }, []);
 
-      const { ScreenWelcome, ScreenStagePicker, ScreenDesk, ScreenChat, ScreenPricing, ScreenAccount } =
+      const { ScreenWelcome, ScreenStagePicker, ScreenDesk, ScreenChat, ScreenChecklist, ScreenPricing, ScreenAccount } =
         window.ConciergeScreens;
       const tones = window.CONCIERGE_TONES;
       const tone  = Object.assign({}, tones[st.stage], { id: st.stage });
 
       const SCREENS = {
-        welcome:  ScreenWelcome,
-        picker:   ScreenStagePicker,
-        desk:     ScreenDesk,
-        chat:     ScreenChat,
-        pricing:  ScreenPricing,
-        account:  ScreenAccount,
+        welcome:   ScreenWelcome,
+        picker:    ScreenStagePicker,
+        desk:      ScreenDesk,
+        chat:      ScreenChat,
+        checklist: ScreenChecklist,
+        pricing:   ScreenPricing,
+        account:   ScreenAccount,
       };
       const ActiveScreen = SCREENS[st.screen] || ScreenWelcome;
 
@@ -148,21 +144,22 @@
           : 'slide-forward';
 
       const ctxValue = {
-        state:           st,
-        navigate:        window.AppState.navigate,
-        goBack:          window.AppState.goBack,
-        selectStage:     window.AppState.selectStage,
-        confirmStage:    window.AppState.confirmStage,
-        setMode:         window.AppState.setMode,
-        addPoints:       window.AppState.addPoints,
-        openChat:        window.AppState.openChat,
-        seedChat:        window.AppState.seedChat,
-        sendMessage:     window.AppState.sendMessage,
-        selectTier:      window.AppState.selectTier,
-        isAgeRestricted: window.AppState.isAgeRestricted,
-        newChat:         window.AppState.newChat,
-        markDone:        window.AppState.markDone,
-        dismissFollowUp: window.AppState.dismissFollowUp,
+        state:                st,
+        navigate:             window.AppState.navigate,
+        goBack:               window.AppState.goBack,
+        selectStage:          window.AppState.selectStage,
+        confirmStage:         window.AppState.confirmStage,
+        setMode:              window.AppState.setMode,
+        addPoints:            window.AppState.addPoints,
+        openChat:             window.AppState.openChat,
+        seedChat:             window.AppState.seedChat,
+        sendMessage:          window.AppState.sendMessage,
+        selectTier:           window.AppState.selectTier,
+        isAgeRestricted:      window.AppState.isAgeRestricted,
+        newChat:              window.AppState.newChat,
+        updateChecklistItem:  window.AppState.updateChecklistItem,
+        markDone:             window.AppState.markDone,
+        dismissFollowUp:      window.AppState.dismissFollowUp,
       };
 
       return (
