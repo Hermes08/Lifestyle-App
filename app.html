@@ -19,7 +19,6 @@
       overflow: hidden;
     }
 
-    /* ── Stage: full-viewport canvas; JS positions the phone ─── */
     .stage {
       position: fixed; top: 0; left: 0;
       width: 100%; height: 100%;
@@ -30,13 +29,11 @@
         #050609;
     }
 
-    /* phone-frame wrapper — JS applies translate() + scale() */
     #phone-frame {
       position: absolute; top: 0; left: 0;
       transform-origin: 0px 0px;
     }
 
-    /* ── Screen transitions ──────────────────────────────────── */
     @keyframes slideInRight {
       from { transform: translateX(100%); opacity: 0.7; }
       to   { transform: translateX(0);    opacity: 1;   }
@@ -55,10 +52,9 @@
     .fade-in       { animation: fadeIn       0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
   </style>
 
-  <!-- Phone scaling: keeps the IOSDevice visible on any viewport -->
   <script>
     (function () {
-      var DW = 402, DH = 874; // IOSDevice default dimensions
+      var DW = 402, DH = 874;
       function resizePhone() {
         var el = document.getElementById('phone-frame');
         if (!el) return;
@@ -82,16 +78,14 @@
     })();
   </script>
 
-  <!-- Core dependencies -->
   <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 
-  <!-- App modules (order matters) -->
   <script src="concierge/tones.js?v=2"></script>
   <script src="concierge/webgl-exploring.js?v=3"></script>
-  <script src="concierge/app-state.js?v=5"></script>
+  <script src="concierge/app-state.js?v=6"></script>
   <script type="text/babel" src="concierge/ios-frame.jsx?v=2" data-presets="react"></script>
   <script type="text/babel" src="concierge/screens.jsx?v=6" data-presets="react"></script>
 </head>
