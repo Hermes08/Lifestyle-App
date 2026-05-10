@@ -1,403 +1,288 @@
 /**
- * app-state.js — Panama Lifestyle OS · Application State v3
+ * app-state.js v4 — Panama Lifestyle OS · Application State
  *
- * Pure-JS event store with localStorage persistence.
- * Adds: follow-up algorithm, completedItems tracking, returnCount.
+ * Pure-JS event store. No external dependencies.
+ * v4 additions: localStorage persistence, returnCount, per-stage checklist,
+ * updateChecklistItem, markDone, dismissFollowUp, _computeFollowUp algorithm.
  *
  * Exposed as: window.AppState
  */
 (function () {
   'use strict';
 
-  /* ── Content rating registry ──────────────────────────────────── */
+  var STORE_KEY = 'panama_os_v4';
+
+  /* ── Content rating registry ───────────────────────────────── */
   var AGE_RESTRICTED = new Set([
     'vip_night', 'casino', 'nightlife_vip', 'adult_social',
   ]);
   function isAgeRestricted(tag) { return tag ? AGE_RESTRICTED.has(tag) : false; }
 
-  /* ── localStorage persistence ────────────────────────────────── */
-  var _STORE_KEY = 'panama_os_v3';
-
-  function _loadPersisted() {
-    try {
-      var raw = localStorage.getItem(_STORE_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch (e) { return {}; }
-  }
-
-  function _savePersisted(s) {
-    try {
-      localStorage.setItem(_STORE_KEY, JSON.stringify({
-        stage:          s.stage,
-        mode:           s.mode,
-        tier:           s.tier,
-        passportPoints: s.passportPoints,
-        completedItems: s.completedItems || [],
-        returnCount:    s.returnCount    || 0,
-        lastVisit:      Date.now(),
-      }));
-    } catch (e) {}
-  }
+  /* ── Per-stage checklist definitions ─────────────────────────── */
+  var STAGE_CHECKLIST = {
+    exploring: [
+      { id: 'e1', label: 'Define your budget & timeline',    category: 'setup',     status: 'not_started' },
+      { id: 'e2', label: 'Share your lifestyle priorities',  category: 'setup',     status: 'not_started' },
+      { id: 'e3', label: 'Read the neighborhood letters',    category: 'planning',  status: 'not_started' },
+      { id: 'e4', label: 'Compare 2–3 target areas',         category: 'planning',  status: 'not_started' },
+      { id: 'e5', label: 'Request virtual property tours',   category: 'execution', status: 'not_started' },
+      { id: 'e6', label: 'Schedule a discovery trip',        category: 'execution', status: 'not_started' },
+      { id: 'e7', label: 'Shortlist your neighborhoods',     category: 'decision',  status: 'not_started' },
+      { id: 'e8', label: 'Set a visit timeline',             category: 'decision',  status: 'not_started' },
+    ],
+    arriving: [
+      { id: 'a1', label: 'Confirm arrival date & time',      category: 'setup',     status: 'not_started' },
+      { id: 'a2', label: 'Finalize movers & pickup date',    category: 'setup',     status: 'not_started' },
+      { id: 'a3', label: 'Confirm pet travel documents',     category: 'setup',     status: 'not_started', optional: true },
+      { id: 'a4', label: 'Review first-week itinerary',      category: 'planning',  status: 'not_started' },
+      { id: 'a5', label: 'Collect customs documents',        category: 'execution', status: 'not_started' },
+      { id: 'a6', label: 'Arrange SIM & connectivity',       category: 'execution', status: 'not_started' },
+      { id: 'a7', label: 'Confirm airport welcome',          category: 'execution', status: 'not_started' },
+      { id: 'a8', label: 'Sign temporary lease',             category: 'decision',  status: 'not_started' },
+    ],
+    settling: [
+      { id: 's1', label: 'Register local address',           category: 'setup',     status: 'not_started' },
+      { id: 's2', label: 'Set up utility accounts',          category: 'setup',     status: 'not_started' },
+      { id: 's3', label: 'Open a bank account',              category: 'planning',  status: 'not_started' },
+      { id: 's4', label: 'Visit 2–3 schools',                category: 'planning',  status: 'not_started', optional: true },
+      { id: 's5', label: 'Find a primary care doctor',       category: 'execution', status: 'not_started' },
+      { id: 's6', label: 'Interview household help',         category: 'execution', status: 'not_started', optional: true },
+      { id: 's7', label: 'Complete residency paperwork',     category: 'execution', status: 'not_started' },
+      { id: 's8', label: 'Enroll in chosen school',          category: 'decision',  status: 'not_started', optional: true },
+    ],
+    living: [
+      { id: 'l1', label: 'File annual taxes with Ricardo',   category: 'setup',     status: 'not_started' },
+      { id: 'l2', label: 'Renew residency card',             category: 'setup',     status: 'not_started' },
+      { id: 'l3', label: 'Review investment portfolio',      category: 'planning',  status: 'not_started' },
+      { id: 'l4', label: 'Plan quarterly experiences',       category: 'planning',  status: 'not_started' },
+      { id: 'l5', label: 'Join club & sports memberships',   category: 'execution', status: 'not_started' },
+      { id: 'l6', label: 'Standing chef or wellness booking',category: 'execution', status: 'not_started', optional: true },
+      { id: 'l7', label: 'Decide on property investment',    category: 'decision',  status: 'not_started' },
+      { id: 'l8', label: 'Choose annual membership plan',    category: 'decision',  status: 'not_started' },
+    ],
+    thriving: [
+      { id: 't1', label: 'Annual legal & estate review',     category: 'setup',     status: 'not_started' },
+      { id: 't2', label: 'Portfolio performance review',     category: 'setup',     status: 'not_started' },
+      { id: 't3', label: 'Shortlist off-market properties',  category: 'planning',  status: 'not_started' },
+      { id: 't4', label: 'Map citizenship timeline',         category: 'planning',  status: 'not_started' },
+      { id: 't5', label: 'Attend member events',             category: 'execution', status: 'not_started' },
+      { id: 't6', label: 'Founder mentor circle session',    category: 'execution', status: 'not_started', optional: true },
+      { id: 't7', label: 'Major property decision',          category: 'decision',  status: 'not_started' },
+      { id: 't8', label: 'Citizenship application',          category: 'decision',  status: 'not_started' },
+    ],
+  };
 
   /* ── Follow-up algorithm ─────────────────────────────────────── */
-  function _computeFollowUp(stage, lastVisit, completedItems, returnCount) {
-    var now       = Date.now();
-    var daysSince = lastVisit ? Math.floor((now - lastVisit) / 86400000) : 999;
-    var isFirst   = !lastVisit || returnCount === 0;
-    var done      = completedItems || [];
+  function _isCompleted(id, items) {
+    var item = (items || []).filter(function (i) { return i.id === id; })[0];
+    return item && item.status === 'completed';
+  }
 
-    var STEPS = {
-      exploring: [
-        { id: 'welcome_report',
-          msg: 'Preparé 3 cartas de barrios — Casco Antiguo, Marbella, Boquete — basadas en tu perfil.',
-          ctaLabel: 'Leer ahora', ctaScreen: 'chat',
-          cond: function () { return isFirst; } },
-        { id: 'followup_call',
-          msg: 'Llevas ' + daysSince + ' días explorando. ¿Agendamos 30 min sin compromiso para hablar opciones?',
-          ctaLabel: 'Agendar llamada', ctaScreen: 'chat',
-          cond: function () { return !isFirst && daysSince >= 3; } },
-        { id: 'plan_trip',
-          msg: 'Siguiente paso real: un trip de reconocimiento de 4 días. Tengo disponibilidad en junio.',
-          ctaLabel: 'Ver el plan', ctaScreen: 'pricing',
-          cond: function () { return returnCount >= 3 && daysSince >= 1; } },
-      ],
-      arriving: [
-        { id: 'confirm_movers',
-          msg: 'Bienvenido de vuelta. Esta semana: confirma la empresa de mudanza — las fechas se llenan rápido.',
-          ctaLabel: 'Coordinar mudanza', ctaScreen: 'chat',
-          cond: function () { return isFirst || daysSince >= 1; } },
-        { id: 'pet_cert',
-          msg: 'El certificado veterinario tiene ventana de exactamente 10 días antes del vuelo. ¿Cuándo viajas?',
-          ctaLabel: 'Coordinar mascotas', ctaScreen: 'chat',
-          cond: function () { return daysSince >= 2; } },
-        { id: 'arrival_kit',
-          msg: 'Kit de llegada listo: SIM Claro, llaves del apartamento, itinerario de semana 1.',
-          ctaLabel: 'Revisar kit', ctaScreen: 'desk',
-          cond: function () { return daysSince >= 5; } },
-      ],
-      settling: [
-        { id: 'bank_appt',
-          msg: 'Tu cita en Banistmo es el jueves con Mariela. Yo ya envié el expediente — solo necesitas llegar.',
-          ctaLabel: 'Ver los 3 documentos', ctaScreen: 'chat',
-          cond: function () { return isFirst || daysSince >= 1; } },
-        { id: 'internet_order',
-          msg: 'Cable Onda instalación tarda 3–7 días hábiles. Mejor pedirlo hoy antes de que necesites trabajar desde casa.',
-          ctaLabel: 'Gestionar internet', ctaScreen: 'chat',
-          cond: function () { return daysSince >= 2 && !done.includes('bank_appt'); } },
-        { id: 'school_visit',
-          msg: 'King\'s College tiene visita abierta este viernes a las 10:00. ¿Confirmo para tus hijos?',
-          ctaLabel: 'Confirmar visita', ctaScreen: 'chat',
-          cond: function () { return daysSince >= 5; } },
-        { id: 'residency_docs',
-          msg: 'El gestor tiene las apostillas. El trámite de residencia avanza esta semana — revisa el estado.',
-          ctaLabel: 'Ver estado del trámite', ctaScreen: 'chat',
-          cond: function () { return daysSince >= 14; } },
-      ],
-      living: [
-        { id: 'tax_review',
-          msg: 'Ricardo tiene el borrador fiscal listo. Renta territorial: ingresos del exterior 100% exentos.',
-          ctaLabel: 'Revisar con Ricardo', ctaScreen: 'chat',
-          cond: function () { return isFirst || daysSince >= 30; } },
-        { id: 'weekend_yacht',
-          msg: 'Fin de semana en calma — Las Perlas perfecto este sábado. El capitán Roque tiene disponibilidad.',
-          ctaLabel: 'Confirmar yate', ctaScreen: 'chat',
-          cond: function () { return !isFirst && daysSince >= 4; } },
-        { id: 'property_alert',
-          msg: 'Dos propiedades nuevas en Marbella que podrían interesarte. ROI estimado 6–8% anual.',
-          ctaLabel: 'Ver propiedades', ctaScreen: 'chat',
-          cond: function () { return daysSince >= 21; } },
-      ],
-      thriving: [
-        { id: 'citizenship_track',
-          msg: 'Residencia continua confirmada. En ruta perfecta para ciudadanía panameña 2028 — pasaporte visa-free en 130+ países.',
-          ctaLabel: 'Ver progreso', ctaScreen: 'chat',
-          cond: function () { return isFirst || daysSince >= 30; } },
-        { id: 'off_market',
-          msg: 'Propiedad privada en Coronado — sin listing, sin agentes. El dueño quiere discreción. Walkthrough viernes.',
-          ctaLabel: 'Saber más', ctaScreen: 'chat',
-          cond: function () { return !isFirst && daysSince >= 7; } },
-        { id: 'portfolio_may',
-          msg: 'Portfolio Mayo 2026: cierre del Casco es el jueves. Fernanda Cruz confirma el documento de traspaso.',
-          ctaLabel: 'Confirmar cierre', ctaScreen: 'chat',
-          cond: function () { return daysSince >= 20; } },
-      ],
-    };
+  var FOLLOW_UP_STEPS = {
+    exploring: [
+      { id: 'fu_e1', msg: 'Your neighborhood letters are waiting — Casco, Punta Pacífica, and Coronado.', ctaLabel: 'Read letters', ctaScreen: 'chat', cond: function (c) { return !_isCompleted('e3', c); } },
+      { id: 'fu_e2', msg: 'Compare your shortlisted areas and mark the one that speaks to you.', ctaLabel: 'View roadmap', ctaScreen: 'checklist', cond: function (c) { return _isCompleted('e3', c) && !_isCompleted('e4', c); } },
+      { id: 'fu_e3', msg: 'Ready to see Panama in person? Eduardo can arrange a private discovery trip.', ctaLabel: 'Schedule trip', ctaScreen: 'chat', cond: function (c) { return _isCompleted('e4', c) && !_isCompleted('e6', c); } },
+      { id: 'fu_e4', msg: "You've done the research. Time to shortlist your top 2 neighborhoods.", ctaLabel: 'Update roadmap', ctaScreen: 'checklist', cond: function (c) { return _isCompleted('e6', c) && !_isCompleted('e7', c); } },
+    ],
+    arriving: [
+      { id: 'fu_a1', msg: 'A few logistics to confirm before you fly — let\'s review your arrival plan.', ctaLabel: 'View roadmap', ctaScreen: 'checklist', cond: function (c) { return !_isCompleted('a1', c); } },
+      { id: 'fu_a2', msg: 'Customs documents need to be in order 10 days before arrival. Sofia can help.', ctaLabel: 'Message Sofia', ctaScreen: 'chat', cond: function (c) { return _isCompleted('a1', c) && !_isCompleted('a5', c); } },
+      { id: 'fu_a3', msg: 'Your first-week itinerary is drafted — review it before you land.', ctaLabel: 'Review plan', ctaScreen: 'checklist', cond: function (c) { return _isCompleted('a5', c) && !_isCompleted('a4', c); } },
+    ],
+    settling: [
+      { id: 'fu_s1', msg: 'Week one priority: open your bank account. Luis has the appointment ready.', ctaLabel: 'Confirm appointment', ctaScreen: 'chat', cond: function (c) { return !_isCompleted('s3', c); } },
+      { id: 'fu_s2', msg: 'Schools visited, options shortlisted. Time to decide and enroll.', ctaLabel: 'Update roadmap', ctaScreen: 'checklist', cond: function (c) { return _isCompleted('s4', c) && !_isCompleted('s8', c); } },
+      { id: 'fu_s3', msg: 'Residency paperwork is in motion — your completion is closer than you think.', ctaLabel: 'Check progress', ctaScreen: 'checklist', cond: function (c) { return _isCompleted('s3', c) && !_isCompleted('s7', c); } },
+    ],
+    living: [
+      { id: 'fu_l1', msg: 'Ricardo is ready for your annual tax review — best to do this before June.', ctaLabel: 'Message Ricardo', ctaScreen: 'chat', cond: function (c) { return !_isCompleted('l1', c); } },
+      { id: 'fu_l2', msg: 'Your portfolio review is overdue — a 30-min call with Ricardo makes it simple.', ctaLabel: 'Schedule call', ctaScreen: 'chat', cond: function (c) { return _isCompleted('l1', c) && !_isCompleted('l3', c); } },
+      { id: 'fu_l3', msg: "You're ready for the next level. Review your membership options.", ctaLabel: 'See plans', ctaScreen: 'pricing', cond: function (c) { return _isCompleted('l3', c) && !_isCompleted('l8', c); } },
+    ],
+    thriving: [
+      { id: 'fu_t1', msg: 'Annual estate review — your legal team is standing by.', ctaLabel: 'Arrange meeting', ctaScreen: 'chat', cond: function (c) { return !_isCompleted('t1', c); } },
+      { id: 'fu_t2', msg: 'Three off-market properties match your criteria. A private viewing awaits.', ctaLabel: 'See properties', ctaScreen: 'chat', cond: function (c) { return _isCompleted('t1', c) && !_isCompleted('t3', c); } },
+      { id: 'fu_t3', msg: 'Citizenship is within reach. Let\'s map your exact timeline.', ctaLabel: 'Plan timeline', ctaScreen: 'checklist', cond: function (c) { return _isCompleted('t3', c) && !_isCompleted('t4', c); } },
+    ],
+  };
 
-    var steps = STEPS[stage] || STEPS.exploring;
+  function _computeFollowUp(stage, checklistItems) {
+    var steps = FOLLOW_UP_STEPS[stage] || [];
     for (var i = 0; i < steps.length; i++) {
       var step = steps[i];
-      if (!done.includes(step.id) && step.cond()) {
+      if (step.cond && step.cond(checklistItems)) {
         return { id: step.id, msg: step.msg, ctaLabel: step.ctaLabel, ctaScreen: step.ctaScreen };
       }
     }
     return null;
   }
 
-  /* ── Boot: load persisted state + increment returnCount ─────── */
-  var _p = _loadPersisted();
+  /* ── localStorage helpers ──────────────────────────────────────── */
+  function _load() {
+    try { var raw = localStorage.getItem(STORE_KEY); return raw ? JSON.parse(raw) : {}; } catch (e) { return {}; }
+  }
+  function _persist() {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify({
+        stage: _state.stage, tier: _state.tier, mode: _state.mode,
+        passportPoints: _state.passportPoints, returnCount: _state.returnCount,
+        isLoggedIn: _state.isLoggedIn, checklistItems: _state.checklistItems,
+      }));
+    } catch (e) {}
+  }
+
+  /* ── Bootstrap ──────────────────────────────────────────────── */
+  var _saved = _load();
+  var _initStage = _saved.stage || 'exploring';
+  var _initChecklist = (function () {
+    var fresh = JSON.parse(JSON.stringify(STAGE_CHECKLIST[_initStage] || STAGE_CHECKLIST.exploring));
+    if (_saved.checklistItems && _saved.checklistItems.length) {
+      var savedMap = {};
+      _saved.checklistItems.forEach(function (i) { savedMap[i.id] = i.status; });
+      fresh.forEach(function (i) { if (savedMap[i.id]) i.status = savedMap[i.id]; });
+    }
+    return fresh;
+  }());
 
   var INITIAL = {
-    screen:         'welcome',
-    prevScreen:     null,
-    stage:          _p.stage          || 'exploring',
-    pendingStage:   null,
-    mode:           _p.mode           || 'practical',
-    tier:           _p.tier           || 'explorer',
-    passportPoints: _p.passportPoints || 0,
-    chatHistory:    [],
-    chatTopic:      null,
-    transition:     'forward',
-    isLoggedIn:     false,
-    isAgeVerified:  false,
-    returnCount:    (_p.returnCount || 0) + 1,
-    lastVisit:      _p.lastVisit      || null,
-    completedItems: _p.completedItems || [],
-    followUp:       null,
+    screen: 'welcome', prevScreen: null, stage: _initStage, pendingStage: null,
+    mode: _saved.mode || 'practical', tier: _saved.tier || 'explorer',
+    passportPoints: _saved.passportPoints || 0, chatHistory: [], chatTopic: null,
+    transition: 'forward', isLoggedIn: _saved.isLoggedIn || false, isAgeVerified: false,
+    returnCount: (_saved.returnCount || 0) + 1,
+    checklistItems: _initChecklist, followUp: null,
   };
-
-  INITIAL.followUp = _computeFollowUp(
-    INITIAL.stage,
-    _p.lastVisit || null,
-    INITIAL.completedItems,
-    _p.returnCount || 0
-  );
-
-  _savePersisted(INITIAL);
-
   var _state = Object.assign({}, INITIAL);
-  var _subs  = [];
+  _state.followUp = _computeFollowUp(_state.stage, _state.checklistItems);
+  _persist();
 
+  var _subs = [];
   function getState() { return Object.assign({}, _state); }
-
   function _set(patch) {
     _state = Object.assign({}, _state, patch);
-    _savePersisted(_state);
     var snap = getState();
     _subs.forEach(function (fn) { fn(snap); });
   }
-
   function subscribe(fn) {
-    _subs.push(fn);
-    fn(getState());
-    return function () {
-      _subs = _subs.filter(function (l) { return l !== fn; });
-    };
+    _subs.push(fn); fn(getState());
+    return function () { _subs = _subs.filter(function (l) { return l !== fn; }); };
   }
 
   function navigate(screen, params, direction) {
-    _set(Object.assign(
-      { prevScreen: _state.screen, screen: screen, transition: direction || 'forward' },
-      params || {}
-    ));
+    _set(Object.assign({ prevScreen: _state.screen, screen: screen, transition: direction || 'forward' }, params || {}));
   }
-
-  function goBack() {
-    var dest = _state.prevScreen || 'desk';
-    _set({ screen: dest, prevScreen: null, transition: 'back' });
-  }
-
+  function goBack() { _set({ screen: _state.prevScreen || 'desk', prevScreen: null, transition: 'back' }); }
   function selectStage(stageId) { _set({ pendingStage: stageId }); }
-
   function confirmStage() {
     var stage = _state.pendingStage || _state.stage;
-    _set({
-      stage:          stage,
-      pendingStage:   null,
-      tier:           _stageTier(stage),
-      passportPoints: _stagePoints(stage),
-      chatHistory:    [],
-      completedItems: [],
-      followUp:       _computeFollowUp(stage, null, [], 0),
-      prevScreen:     _state.screen,
-      screen:         'desk',
-      transition:     'forward',
-    });
+    var freshChecklist = JSON.parse(JSON.stringify(STAGE_CHECKLIST[stage] || STAGE_CHECKLIST.exploring));
+    _set({ stage: stage, pendingStage: null, tier: _stageTier(stage), passportPoints: _stagePoints(stage),
+           chatHistory: [], prevScreen: _state.screen, screen: 'desk', transition: 'forward',
+           checklistItems: freshChecklist, followUp: _computeFollowUp(stage, freshChecklist) });
+    _persist();
   }
-
-  function _stageTier(s) {
-    return { exploring: 'explorer', arriving: 'explorer', settling: 'settler', living: 'resident', thriving: 'legend' }[s] || 'explorer';
-  }
-  function _stagePoints(s) {
-    return { exploring: 4, arriving: 16, settling: 38, living: 82, thriving: 168 }[s] || 4;
-  }
-
-  function setMode(mode) { _set({ mode: mode }); }
-
+  function _stageTier(s) { return { exploring:'explorer',arriving:'explorer',settling:'settler',living:'resident',thriving:'legend' }[s]||'explorer'; }
+  function _stagePoints(s) { return { exploring:4,arriving:16,settling:38,living:82,thriving:168 }[s]||4; }
+  function setMode(mode) { _set({ mode: mode }); _persist(); }
   function addPoints(pts) {
     var n = _state.passportPoints + pts;
-    _set({ passportPoints: n, tier: _pointsTier(n, _state.stage) });
+    _set({ passportPoints: n, tier: _pointsTier(n, _state.stage) }); _persist();
   }
-
   function _pointsTier(pts, stage) {
-    if (stage === 'thriving') return 'legend';
-    if (pts >= 500) return 'legend';
-    if (pts >= 200) return 'resident';
-    if (pts >= 75)  return 'settler';
-    return 'explorer';
+    if (stage==='thriving') return 'legend';
+    if (pts>=500) return 'legend'; if (pts>=200) return 'resident'; if (pts>=75) return 'settler'; return 'explorer';
   }
-
+  function updateChecklistItem(id, status) {
+    var items = _state.checklistItems.map(function (item) { return item.id===id ? Object.assign({},item,{status:status}) : item; });
+    _set({ checklistItems: items, followUp: _computeFollowUp(_state.stage, items) }); _persist();
+  }
   function markDone(itemId) {
-    if (!itemId || _state.completedItems.includes(itemId)) return;
-    var next = _state.completedItems.concat([itemId]);
-    var nextFollowUp = _computeFollowUp(
-      _state.stage, _state.lastVisit, next, _state.returnCount
-    );
-    _set({ completedItems: next, followUp: nextFollowUp });
-    addPoints(10);
+    var items = _state.checklistItems.map(function (item) { return item.id===itemId ? Object.assign({},item,{status:'completed'}) : item; });
+    _set({ checklistItems: items, followUp: _computeFollowUp(_state.stage, items) }); addPoints(10);
   }
-
   function dismissFollowUp() {
-    if (_state.followUp) {
-      markDone(_state.followUp.id);
-    } else {
-      _set({ followUp: null });
-    }
+    var items = _state.checklistItems.map(function (item) {
+      return item.status==='not_started' ? Object.assign({},item,{status:'in_progress'}) : item;
+    });
+    _set({ checklistItems: items, followUp: _computeFollowUp(_state.stage, items) }); _persist();
   }
-
-  function openChat(topic) {
-    _set({ chatTopic: topic || null, prevScreen: _state.screen, screen: 'chat', transition: 'forward' });
-  }
-
-  function seedChat(messages) {
-    if (_state.chatHistory.length === 0) {
-      _set({ chatHistory: messages });
-    }
-  }
-
-  function newChat() {
-    _set({ chatHistory: [], chatTopic: null });
-  }
-
+  function openChat(topic) { _set({ chatTopic: topic||null, prevScreen: _state.screen, screen: 'chat', transition: 'forward' }); }
+  function seedChat(messages) { if (_state.chatHistory.length===0) _set({ chatHistory: messages }); }
+  function newChat() { _set({ chatHistory: [], chatTopic: null }); }
   function sendMessage(text) {
-    if (!text || !text.trim()) return;
-    var uid   = Date.now();
+    if (!text||!text.trim()) return;
+    var uid = Date.now();
     var reply = _mariaReply(text.trim(), _state.stage, _state.mode, _state.chatTopic);
-    var next  = _state.chatHistory.concat([
-      { id: uid,     role: 'user',  text: text.trim(), ts: new Date() },
-      { id: uid + 1, role: 'maria', text: reply,       ts: new Date() },
-    ]);
-    _set({ chatHistory: next });
+    _set({ chatHistory: _state.chatHistory.concat([ {id:uid,role:'user',text:text.trim(),ts:new Date()}, {id:uid+1,role:'maria',text:reply,ts:new Date()} ]) });
     addPoints(5);
   }
-
   function selectTier(tierId) { addPoints(15); }
 
   var _KB = {
     exploring: {
-      visa:     'Panama tiene 3 rutas principales: Friendly Nations Visa (la más rápida, para 50+ países), Pensionado ($1,000/mes ingresos pasivos), e Inversionista ($200K en real estate o depósito a plazo). Con pasaporte estadounidense tienes todas las opciones abiertas. ¿Te cuento cuál conviene para tu caso?',
-      casa:     'Antes de comprar, recomiendo arrendar 3–6 meses. Cuatro perfiles: Casco Viejo (histórico, bohemio, $1,500+), Marbella/Punta Pacífica (moderno, central, $1,200+), Costa del Este (familiar, tranquilo, $1,400+), Boquete (montañoso, fresco, $600+). ¿Qué tipo de vida buscas?',
-      costo:    'El costo de vida está 35–45% por debajo de EE.UU. para calidad comparable. Pareja cómoda en Ciudad de Panamá: $2,500–3,500/mes. Soltero: $1,500–2,500. Boquete: $1,200–2,000. ¿Quieres el desglose completo?',
-      banco:    'Para nuevos residentes: Banistmo o Multibank son los más accesibles. Necesitas pasaporte, carta de ingresos y factura de servicios local. El proceso toma 2–8 semanas. Opción digital inmediata: Nequi, sin requisitos de residencia.',
-      where:    'Las zonas más populares para expats: Casco Viejo (histórico), Marbella/Punta Pacífica (moderno, central), Costa del Este (familiar), El Cangrejo (económico, céntrico), y Boquete en las montañas. ¿Tienes preferencia de clima o estilo de vida?',
-      call:     'Perfecto. Te envío el calendario — 30 min, sin costo, sin compromiso. Solo para entender tu situación y darte las opciones correctas. ¿Mañana por la mañana o la tarde?',
-      mascota:  'Sí, es posible traer mascotas a Panamá. Necesitas: certificado de salud del veterinario (dentro de los 10 días exactos antes del vuelo), apostilla o sello del consulado panameño, y certificado USDA para perros/gatos desde EE.UU. Panama Pet Relocation son IPATA-Certified con agentes en 80+ países. ¿Perro o gato?',
-      internet: 'La velocidad mediana en Panamá es 185 Mbps en 2026. Cable Onda es el proveedor más confiable — fibra hasta 600 Mbps desde $35/mes. Claro y Tigo también disponibles. La instalación tarda 3–7 días hábiles.',
-      mudanza:  'Para el contenedor internacional: IGo Panama, DoPanama, y StartAbroad son los más recomendados para expats. El menaje de casa entra libre de impuestos con visa de residente. Necesitas lista detallada de cada ítem. ¿Ya tienes visa o vas en paralelo?',
-      seguro:   'Para salud expat: Cigna Global, Allianz, y AXA son los planes más comunes. Recomiendo contratar antes de salir de tu país — más opciones y mejores precios. Consulta de especialista privado en Panamá: $50–130, versus $200–450 en EE.UU.',
-      default:  'Estoy aquí para guiarte. Cuéntame — ¿qué te hizo buscar información sobre Panamá? Eso me ayuda a mostrarte lo más relevante para ti.',
+      visa: 'Panama tiene 3 rutas principales: Visa Naciones Amigas (la más rápida), Pensionado, e Inversionista. Con pasaporte estadounidense y 18 meses de margen, tienes todas las opciones abiertas. ¿Quieres que agende una llamada de 30 min sin compromiso?',
+      casa: 'Antes de comprar, recomiendo arrendar. Tres perfiles: Casco Viejo (histórico, bohemio), Costa del Este (moderno, familiar), Boquete (fresco, montañoso). ¿Qué tipo de vida buscas?',
+      costo: 'El costo de vida está 35–45% por debajo de EE.UU. para calidad comparable. Apartamento 2BR en Marbella: $1,200–2,000/mes. Cena en buen restaurante: $25–40 por persona. ¿Quieres el desglose completo?',
+      banco: 'Para nuevos residentes lo más accesible es Banistmo o Multibank. Necesitarás: pasaporte, carta de ingresos y factura de servicios local. El proceso toma 2–4 semanas.',
+      where: 'Las 3 zonas más populares para expats: Casco Viejo (histórico, $1,500+/mes), Marbella/Punta Pacífica (moderno, $1,200+), y Boquete en las montañas ($600+). ¿Tienes preferencia de clima?',
+      call: 'Perfecto. Te envío el calendario — 30 min, sin costo, sin compromiso. Solo para entender tu situación y darte las opciones correctas. ¿Prefieres mañana por la mañana o la tarde?',
+      default: 'Estoy aquí para guiarte. Cuéntame — ¿qué te hizo buscar información sobre Panamá? Eso me ayuda a mostrarte lo más relevante para ti.',
     },
     arriving: {
-      mudanza:  'Para el contenedor: IGo Panama, DoPanama, StartAbroad son los más recomendados. El menaje de casa entra libre de impuestos con visa de residente. Necesitas lista detallada de cada ítem. ¿Tienes ya la visa confirmada o va en paralelo?',
-      mascota:  'Para la llegada de tu mascota: certificado veterinario USDA/CFIA válido exactamente 10 días antes del vuelo, apostilla o sello del consulado panameño. Coordino con Panama Pet Relocation — IPATA-Certified, agentes en 80+ países. ¿Cuándo es el vuelo?',
-      pickup:   '¡Confirmado! El chofer estará en el pasillo de llegadas internacionales con tu nombre. Las llaves del apartamento están listas — código del edificio te lo mando por separado. ¿A qué hora exacta aterrizas?',
-      sim:      'Plan recomendado: Claro turista $15 por 10GB, cubre todo el país. Hay kiosco justo al salir de aduana en Tocumen. O puedo tenerte una SIM esperando en el apartamento. ¿Cuál prefieres?',
-      banco:    'Para el primer mes, Nequi (digital) funciona sin prueba de residencia — perfecto para empezar. Banistmo y Multibank requieren factura local; en 3–4 semanas ya tendrás eso.',
-      internet: 'Cable Onda es el más confiable en Ciudad de Panamá — fibra hasta 600 Mbps desde $35/mes. La instalación tarda 3–7 días hábiles. Pídelo el primer día que llegues para no quedarte sin conexión.',
-      seguro:   'Si no contrataste seguro antes de viajar, aún puedes conseguir cobertura. Hospital Paitilla y Pacífica Salud son privados — médicos formados en EE.UU. y Europa. Consulta especialista: $50–130 sin seguro.',
-      default:  'Tu llegada está próxima. Tengo coordinado el transporte, las llaves del apartamento y el kit de bienvenida. ¿Qué más quieres revisar antes de llegar?',
+      pickup: '¡Confirmado! Carlos estará en el pasillo de llegadas con tu nombre. El apartamento en Casco tiene las llaves listas — código del edificio: 4821. ¿A qué hora aterrizas exactamente?',
+      sim: 'El plan recomendado: Claro turista $15, 10 GB, cubre todo el país. Hay kiosco justo después de aduana. O te puedo tener una SIM esperando en el apartamento. ¿Qué prefieres?',
+      banco: 'Para el primer mes, Nequi (digital) funciona sin prueba de residencia — perfecto para empezar. Banistmo y Multibank requieren factura local; en 3–4 semanas ya tendrás eso.',
+      default: 'Tu llegada está próxima. Tengo coordinado el transporte, las llaves del apartamento y el kit de bienvenida. ¿Qué más quieres revisar antes de llegar?',
     },
     settling: {
-      escuela:  'Las dos más recomendadas: King\'s College (currículo Cambridge, Marbella, matrícula $3,000–8,000) y Oxford International (IB, Costa del Este). También: Balboa Academy (WASC-acreditada) e ISP. Tengo la visita al King\'s este viernes a las 10:00. ¿Cuántos años tienen tus hijos?',
-      medico:   'Paitilla y Pacífica Salud son los hospitales privados de referencia — médicos formados en EE.UU. y Europa. Para médico de cabecera en inglés, el Dr. Morales en Paitilla tiene citas esta semana. Consulta: $50–130.',
-      banco:    'Ya pasaron las semanas necesarias — deberías tener factura local ahora. Banistmo Paitilla tiene cita disponible el jueves. Documentos: pasaporte, carta de ingresos, factura de servicios, foto. ¿Te agendo?',
-      internet: 'Para instalar Cable Onda necesitas: cédula o pasaporte y dirección del apartamento. Llamo hoy para la cita — instalación en 3–7 días hábiles. Fibra hasta 600 Mbps desde $35/mes. ¿Confirmo?',
-      docs:     'Para la residencia necesitas: pasaporte apostillado, antecedentes penales apostillados del país de origen, certificado médico local, y fotos. El gestor tiene todo en proceso. La apostilla desde EE.UU. tarda 5 días.',
-      carro:    'Para importar tu vehículo: libre de impuestos con residencia permanente (un vehículo por persona). Para comprar aquí: concesionarios en Costa del Este y Multiplaza. Seguro SOAT obligatorio. ¿Traes auto o prefieres comprar aquí?',
-      seguro:   'Para seguro médico local como residente: Blue Cross Panamá, Mapfre, o ASSA son las principales aseguradoras locales. Con residencia también puedes acceder a la CSS para cobertura básica.',
-      mascota:  'Para registrar a tu mascota en Panamá: vacuna antirrábica vigente, desparasitación, y registro en MIDA. El proceso es sencillo — te coordino con un veterinario de confianza en Marbella que atiende en inglés.',
-      default:  'Semana 3 en Panamá — ya eres panameño de facto. ¿Hoy toca gestiones, escuela, o conectar con la comunidad de expats?',
+      escuela: 'Las dos más recomendadas: King\'s College (Cambridge curriculum, Marbella) y Oxford International (IB, Costa del Este). Ya tengo la visita al King\'s este viernes. ¿Cuántos años tienen tus hijos?',
+      medico: 'Paitilla y Pacífica Salud son los hospitales privados de referencia. Para médico de cabecera, el Dr. Morales en Paitilla habla inglés y tiene citas disponibles esta semana.',
+      banco: 'Ya pasaron las 3 semanas — deberías tener factura local ahora. Banistmo Paitilla tiene cita disponible el jueves. ¿Te agendo?',
+      docs: 'Para la residencia necesitas: pasaporte apostillado, antecedentes penales apostillados, certificado médico y fotos. El gestor tiene todo en proceso.',
+      default: 'Semana 3 en Panama — ya eres panameño de facto. ¿Hoy toca gestiones, escuela, o conectar con la comunidad de expats?',
     },
     living: {
-      impuesto:  'Panama usa el sistema de renta territorial — tus ingresos del exterior están 100% exentos de impuestos. Solo pagas sobre lo que ganas dentro de Panamá. Para ciudadanos US: FATCA aplica pero sin doble imposición. Ricardo tiene el borrador listo.',
-      inversion: 'El mercado de Casco está fuerte — ROI de arrendamiento 6–8% anual. Punta Pacífica: 5–7%. Costa del Este para largo plazo y plusvalía. Off-market hay propiedades que nunca llegan a portales. ¿Buscas renta mensual o plusvalía a 5 años?',
-      negocio:   'Sociedad Anónima es la estructura más común para extranjeros. Costo total ~$1,200 incluyendo registro, RUC y cuenta empresarial. Si operas solo internacionalmente, una SA sin actividad local puede ser suficiente. ¿Tu actividad es local o internacional?',
-      carro:     'Para renovar placa y registro: ATTT, revisión técnica anual obligatoria. Si importaste el auto con residencia permanente hace más de 3 años, ya puedes venderlo libre del impuesto de importación.',
-      yate:      'Marina Flamenco tiene disponibilidad este sábado. Opciones: medio día 4h ($380) o día completo 8h ($650). También Balboa Yacht Club para socios. ¿Cuántos van? ¿Catering incluido?',
-      golf:      'Tucan Country Club tiene disponibilidad mañana a las 7 AM o 3 PM. Santa María abrió slots este fin de semana. Summit Golf Club en Clayton para una experiencia más exclusiva. ¿Cuántos jugadores?',
-      mascota:   'Para viajes regionales con tu mascota: Copa Airlines permite perros y gatos en cabina hasta 8kg. Para retiros en las islas: verificar restricciones de fauna local. ¿A dónde planeas viajar?',
-      default:   'Buen día. Tienes 3 cosas en el escritorio: revisión fiscal con Ricardo, mantenimiento de piscina mañana, y el evento de la comunidad el sábado. ¿Por cuál empezamos?',
+      impuesto: 'Panama usa el sistema de renta territorial — tus ingresos del exterior están completamente exentos. Solo pagas sobre lo que ganas dentro de Panamá.',
+      inversion: 'El mercado de Casco está fuerte — ROI de arrendamiento 6–8% anual. Para Punta Pacífica, 5–7%. ¿Buscas renta mensual o plusvalía a 5 años?',
+      negocio: 'Sociedad Anónima es la estructura más común. Costo total ~$1,200 incluyendo registro, RUC y cuenta empresarial.',
+      default: 'Buen día. Tienes 3 cosas en el escritorio: revisión fiscal con Ricardo, mantenimiento de piscina mañana, y el evento de la comunidad el sábado. ¿Por cuál empezamos?',
     },
     thriving: {
-      cierre:     'Para el cierre del jueves: confirma que Fernanda Cruz (administradora HOA) tiene el documento de traspaso, y que Patricia tiene la Escritura original. ¿Quieres que coordine la llamada entre ellas hoy?',
-      ciudadania: 'Año 3, mes 4 de residencia continua. En ruta perfecta para ciudadanía 2028 — pasaporte panameño, visa-free en 130+ países. Renovación anual marcada en octubre. ¿Revisamos el expediente?',
-      golf:       'Tucan Country Club tiene disponibilidad mañana a las 7 AM o 3 PM. Santa María también abrió slots este fin de semana. ¿Cuántos jugadores y qué prefieren?',
-      yate:       'Marina Flamenco tiene disponibilidad este sábado. Opciones: medio día (4h, $380) o día completo (8h, $650). ¿Cuántos van? ¿Catering incluido?',
-      impuesto:   'Panama: renta territorial desde 1977, ingresos del exterior siempre exentos. Para ciudadanía activa: no ausencias de más de 1 año continuo. Ricardo tiene el historial completo.',
-      negocio:    'Para family office en Panamá: SA + Fundación de Interés Privado es la estructura más común. Banca privada: BAC Private Banking, Multibank Private. ¿Quieres que coordine introductions?',
-      mascota:    'Con ciudadanía panameña en proceso, tus mascotas viajan con pasaporte panameño de mascotas. Copa Airlines permite cabina hasta 8kg. Para retiros en las islas: verificar restricciones de fauna local.',
-      default:    'Portfolio Mayo 2026. Tienes el cierre del Casco el jueves y la renovación de ciudadanía en octubre. ¿Qué orquestamos hoy?',
+      cierre: 'Para el cierre del jueves: confirma que Fernanda Cruz tiene el documento de traspaso, y que Patricia tiene la Escritura original.',
+      ciudadania: 'Año 3, mes 4 de residencia continua. En ruta perfecta para 2028.',
+      golf: 'Tucan Country Club tiene disponibilidad mañana a las 7 AM o 3 PM.',
+      yate: 'Marina Flamenco tiene disponibilidad este sábado. Opciones: medio día (4h, $380) o día completo (8h, $650).',
+      default: 'Portfolio mayo 2026. Tienes el cierre del Casco el jueves y la renovación de ciudadanía en octubre. ¿Qué orquestamos hoy?',
     },
   };
-
   var _PATTERNS = [
-    [/visa|residencia|residency|permiso|fnv|friendly nations/i,          'visa'      ],
-    [/casa|apartamento|vivienda|housing|rent|arrendar|alquil/i,          'casa'      ],
-    [/costo|precio|dinero|cost|living|vida|cuánto|budget/i,              'costo'     ],
-    [/banco|bank|cuenta|nequi|banistmo|multibank/i,                      'banco'     ],
-    [/dond|barrio|zona|where|neighborhood|area|vivir/i,                  'where'     ],
-    [/llam|call|reunión|meet|schedule|cita|hablar/i,                     'call'      ],
-    [/pickup|aeropuerto|airport|transfer|tocumen|llegada/i,              'pickup'    ],
-    [/sim|teléfono|phone|claro|movistar|número|tigo/i,                   'sim'       ],
-    [/escuela|school|colegio|niñ|hijo|kids|king|oxford|balboa/i,         'escuela'   ],
-    [/médico|doctor|salud|health|hospital|clínica|paitilla/i,            'medico'    ],
-    [/doc|apostill|papeles|papers|gestor|trámite/i,                      'docs'      ],
-    [/impuesto|tax|fiscal|tributar|renta|fatca|declaraci/i,              'impuesto'  ],
-    [/invers|propiedad|property|real estate|comprar|mercado/i,           'inversion' ],
-    [/negocio|empresa|business|sociedad|\bsa\b|fundaci/i,                'negocio'   ],
-    [/cierr|closing|firma|sign|escritura|notario|traspaso/i,             'cierre'    ],
-    [/ciudadan|citizenship|pasaporte|naturaliz/i,                        'ciudadania'],
-    [/golf|tucan|santa mar[ií]a|campo|club/i,                            'golf'      ],
-    [/yate|yacht|barco|marina|boat|velero|charter|perlas|contadora/i,    'yate'      ],
-    [/mascota|perro|gato|dog|cat|pet|animal|veterinario|vet|mida/i,      'mascota'   ],
-    [/internet|wifi|cable.?onda|fibra|banda|conectar|cwo/i,              'internet'  ],
-    [/mudanza|shipping|contenedor|container|movers?|embalaje/i,          'mudanza'   ],
-    [/seguro|insurance|cobertura|allianz|cigna|axa/i,                    'seguro'    ],
-    [/carro|auto|vehicle|vehiculo|\bcar\b|conducir|licencia|attt|placa/i,'carro'     ],
+    [/visa|residencia|residency|permiso|fnv/i,'visa'],[/casa|apartamento|vivienda|housing|rent|arrendar|alquil/i,'casa'],
+    [/costo|precio|dinero|cost|living|vida|cuánto/i,'costo'],[/banco|bank|cuenta|nequi|banistmo/i,'banco'],
+    [/dond|barrio|zona|where|neighborhood|area|vivir/i,'where'],[/llam|call|reunión|meet|schedule|cita|hablar/i,'call'],
+    [/pickup|aeropuerto|airport|carlos|transfer|tocumen/i,'pickup'],[/sim|teléfono|phone|claro|movistar|número/i,'sim'],
+    [/escuela|school|colegio|niñ|hijo|kids/i,'escuela'],[/médico|doctor|salud|health|hospital|clínica/i,'medico'],
+    [/doc|apostill|papeles|papers|gestor/i,'docs'],[/impuesto|tax|fiscal|tributar|renta/i,'impuesto'],
+    [/invers|propiedad|property|real estate|comprar/i,'inversion'],[/negocio|empresa|business|sociedad/i,'negocio'],
+    [/cierr|closing|firma|sign|escritura|notario/i,'cierre'],[/ciudadan|citizenship|pasaporte|naturaliz/i,'ciudadania'],
+    [/golf|tucan|santa mar[í]a|campo/i,'golf'],[/yate|yacht|barco|marina|boat|velero/i,'yate'],
   ];
-
   function _mariaReply(text, stage, mode, topic) {
-    var combined = (text + ' ' + (topic || '')).toLowerCase();
-    var kb = _KB[stage] || _KB.exploring;
-
-    for (var i = 0; i < _PATTERNS.length; i++) {
-      var pat = _PATTERNS[i][0], key = _PATTERNS[i][1];
-      if (pat.test(combined) && kb[key]) return kb[key];
-    }
-
-    if (mode === 'family')   return 'Con gusto te ayudo con todo lo relacionado a familia — escuelas, mascotas, actividades para niños, o servicios domésticos. ¿Por dónde empezamos?';
-    if (mode === 'luxury')   return kb.default + ' En modo Luxury tengo acceso a experiencias exclusivas — ¿quieres que te muestre las opciones de esta semana?';
-    if (mode === 'business') return kb.default + ' Estoy revisando las oportunidades de networking y negocios disponibles para ti.';
-    if (mode === 'kids')     return '¡Hola! ¿En qué actividades para los chicos puedo ayudarte hoy?';
+    var combined = (text+' '+(topic||'')).toLowerCase();
+    var kb = _KB[stage]||_KB.exploring;
+    for (var i=0;i<_PATTERNS.length;i++) { if (_PATTERNS[i][0].test(combined)&&kb[_PATTERNS[i][1]]) return kb[_PATTERNS[i][1]]; }
+    if (mode==='family') return 'Con gusto te ayudo con todo lo relacionado a familia. ¿Preguntas sobre escuelas, actividades para niños, o servicios domésticos?';
+    if (mode==='luxury') return kb.default+' En modo Luxury tengo acceso a experiencias exclusivas.';
+    if (mode==='business') return kb.default+' Estoy revisando las oportunidades de networking y negocios disponibles para ti.';
+    if (mode==='kids') return '¡Hola! ¿En qué actividades para los chicos puedo ayudarte hoy?';
     return kb.default;
   }
 
   window.AppState = {
-    getState:        getState,
-    subscribe:       subscribe,
-    navigate:        navigate,
-    goBack:          goBack,
-    selectStage:     selectStage,
-    confirmStage:    confirmStage,
-    setMode:         setMode,
-    addPoints:       addPoints,
-    openChat:        openChat,
-    seedChat:        seedChat,
-    sendMessage:     sendMessage,
-    selectTier:      selectTier,
-    isAgeRestricted: isAgeRestricted,
-    newChat:         newChat,
-    markDone:        markDone,
-    dismissFollowUp: dismissFollowUp,
+    getState:getState, subscribe:subscribe, navigate:navigate, goBack:goBack,
+    selectStage:selectStage, confirmStage:confirmStage, setMode:setMode, addPoints:addPoints,
+    openChat:openChat, seedChat:seedChat, sendMessage:sendMessage, selectTier:selectTier,
+    isAgeRestricted:isAgeRestricted, newChat:newChat,
+    updateChecklistItem:updateChecklistItem, markDone:markDone, dismissFollowUp:dismissFollowUp,
   };
-
 }());
